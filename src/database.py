@@ -59,9 +59,16 @@ CREATE TABLE IF NOT EXISTS career_stats (
 
 
 def init_db(db_path: Path = DB_PATH) -> sqlite3.Connection:
-    """Create the players/career_stats tables if they don't exist and return a connection."""
+    """Create the players/career_stats tables if they don't exist and return a connection.
+
+    check_same_thread=False: the connection is meant to be created once and reused
+    across calls (e.g. cached as a Streamlit resource), and Streamlit runs script
+    reruns on a thread pool rather than one fixed thread. Safe here because the app
+    only ever runs one query/insert at a time against this connection, never
+    concurrent writes from multiple threads at once.
+    """
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.execute(CREATE_PLAYERS_TABLE)
     conn.execute(CREATE_CAREER_STATS_TABLE)
     conn.commit()
