@@ -259,5 +259,53 @@ Completed task: 1.6 Streamlit — player profile page
   than guessing at the right shared shape before a second caller
   exists; revisit extraction when writing 1.7.
 
+## Last session: 2026-09-21 (cont'd)
+Completed task: 1.7 Streamlit — player comparison page
+
+- Extracted the shared `get_connection()`, `get_or_build_player()`, and
+  `with_per_game_averages()` logic out of `app.py` into `src/pipeline.py`
+  (the extraction flagged as deferred back in 1.6) — now used by both
+  `app.py` and the new comparison page. Also added
+  `get_headshot_url(person_id)` to the shared module.
+- Added `pages/1_Player_Comparison.py` (Streamlit's `pages/` convention
+  auto-adds it to the sidebar nav). Two independent player pickers, each
+  with its own season dropdown (defaulting to that player's most recent
+  season) — e.g. LeBron's 2025-26 vs. LaMelo's 2020-21 rookie season is
+  a valid, deliberate combination, not just "both latest."
+- Added a grouped bar chart (PTS/REB/AST) for the two selected
+  player-seasons, and a full-career PPG line chart overlaying both
+  players, with a radio toggle between two x-axis alignments: actual
+  calendar season, or season number within each player's own career
+  (see `docs/methodology.md` for why both are kept).
+- Added player headshots (NBA CDN, unofficial but verified stable
+  pattern) to both the profile page and the comparison page.
+- Tested live in a browser: verified both pages render correctly, the
+  headshot images load for an active star, a young player, and a
+  retired legend; independent season selection updates only the
+  affected player's metrics and the shared bar chart; one invalid name
+  in the comparison page shows a clean error in that column only,
+  while the other column and its data still render, and the combined
+  charts correctly don't appear (short-circuited on the missing
+  player). Verified chart data directly via the browser's JS console
+  (not just screenshots) after an earlier task's screenshot crop had
+  been misleading about how much data was actually plotted.
+- Updated `README.md` and `docs/methodology.md`.
+
+## Decisions made (1.7)
+- Season-level head-to-head (pick a specific season per player) instead
+  of a single aggregate "career average" comparison — matches what was
+  actually asked for, and is more interesting: it lets you compare
+  specific moments (peak season vs. peak season, rookie year vs. rookie
+  year, or any other combination) rather than flattening a career into
+  one number.
+- Both chart-alignment modes (calendar season and career season #) kept
+  as a user-facing toggle rather than picking one — see
+  `docs/methodology.md`.
+- Known, deliberately deferred polish item: the sidebar nav label for
+  the profile page reads "app" (Streamlit derives it from the
+  filename). Fixing this properly means switching to the
+  `st.navigation`/`st.Page` API, a bigger structural change than this
+  task's scope — not done now to avoid scope creep beyond 1.7.
+
 ## Next task
-1.7 Streamlit — player comparison page
+1.8 Complete v1 README
