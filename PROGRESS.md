@@ -33,11 +33,28 @@ Completed task: 1.2 API exploration in a notebook
   static player/team lookups (`nba_api.stats.static`) work instantly,
   offline; three live `stats.nba.com` endpoints (`CommonPlayerInfo`,
   `PlayerCareerStats`, `LeagueGameLog`) all `ReadTimeout` after 15s.
-- Root cause documented in the notebook: `stats.nba.com` sits behind
-  bot-protection that silently stalls/drops requests from datacenter and
-  cloud IP ranges — this is an IP-reputation issue (confirmed by testing
-  with `nba_api`'s own headers, which made no difference), not a missing
-  header or a code bug. Expected to work from a normal home network.
+- Initial root-cause hypothesis (since corrected, see below): attributed
+  the timeouts to `stats.nba.com` blocking the cloud sandbox's
+  datacenter IP specifically.
+
+## Correction — 2026-09-20
+The cloud-IP-blocking hypothesis above was tested and disproved: the
+same `CommonPlayerInfo` call was re-run from a home network (residential
+IP), outside the sandbox, and produced an identical `ReadTimeout` on the
+same timeout window. The static endpoints again worked instantly. This
+rules out IP origin as the cause.
+
+Corrected explanation, sourced from `nba_api`'s issue tracker: the live
+`stats.nba.com` endpoints are independently known to hang/timeout
+unpredictably regardless of where the request comes from — a
+long-running, widely reported pattern
+([#633](https://github.com/swar/nba_api/issues/633),
+[#176](https://github.com/swar/nba_api/issues/176),
+[#125](https://github.com/swar/nba_api/issues/125),
+[#320](https://github.com/swar/nba_api/issues/320)), not a sandbox
+artifact. Cloud-IP blocking is a real, separately documented issue for
+this API, it just isn't what caused this particular timeout. Full
+writeup in `notebooks/api_exploration.ipynb`, "Findings" section.
 - Added `requirements-dev.txt` (jupyter, ipykernel) as a dev-only
   dependency, kept separate from the app's runtime `requirements.txt`.
 
@@ -46,10 +63,16 @@ Completed task: 1.2 API exploration in a notebook
   `CommonPlayerInfo` + `PlayerCareerStats` for the profile/comparison
   pages (1.6/1.7). `LeagueGameLog` explored but not used until V2.
 - `fetch.py` (task 1.3) will need to: throttle calls (~0.6-1s delay),
-  fail fast on timeout instead of hanging, cache raw responses to
-  `data/raw/`, and must be run from a normal network — not CI/cloud.
-  No proxy/VPN workaround chosen; deemed disproportionate for a
-  portfolio project when running locally solves it.
+  retry + fail fast on timeout instead of hanging indefinitely, and
+  cache raw responses to `data/raw/` so a flaky endpoint doesn't have to
+  be re-hit on every pipeline run.
+- No IP/network workaround (proxy, VPN, alternate hosting) adopted —
+  since the timeouts aren't IP-specific, none would reliably fix it.
+  VPN specifically has mixed evidence in the community: it helps with
+  the *separate* cloud-IP-blocking issue, but
+  [#30](https://github.com/swar/nba_api/issues/30) reports a VPN
+  *causing* hangs. Documented as a manual fallback to try if `fetch.py`
+  proves consistently unusable, not built into the project.
 
 ## Next task
 1.3 Data pipeline — fetch.py
