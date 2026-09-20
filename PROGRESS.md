@@ -74,5 +74,39 @@ writeup in `notebooks/api_exploration.ipynb`, "Findings" section.
   *causing* hangs. Documented as a manual fallback to try if `fetch.py`
   proves consistently unusable, not built into the project.
 
+## Correction #2 — 2026-09-20
+The correction above ("not IP/VPN-related, `stats.nba.com` just hangs
+regardless of origin") was itself built on a confounded test. The
+"home network, residential IP, outside the sandbox" retest that led to
+that conclusion was run on this same local machine, which had a US VPN
+active by default — so that retest was never actually off-VPN either.
+
+Retested properly this session: same three endpoints
+(`CommonPlayerInfo`, `PlayerCareerStats`, `LeagueGameLog`), same
+machine. First with the VPN on: all three `ReadTimeout` again,
+consistent with every prior attempt. Then the VPN was disabled,
+confirmed via a public-IP check (`ifconfig.me` returned a French
+residential IP, not the VPN's US exit node), and the three endpoints
+were re-run in a fresh Python process: all three succeeded in 2-4s
+each, no retry needed.
+
+**Corrected root cause: the US VPN was breaking these endpoints.**
+`stats.nba.com` is not inherently flaky in general — it responds
+quickly on a direct connection. This matches a separately known
+community report ([#30](https://github.com/swar/nba_api/issues/30))
+that a VPN can *cause* hangs on these endpoints, rather than being a
+workaround for cloud-IP blocking as originally assumed. Both prior
+explanations (cloud-IP blocking, then "hangs unpredictably regardless
+of origin") are superseded by this one.
+
+## Decisions made (correction #2)
+- `fetch.py` (1.3) no longer needs to assume the API is fundamentally
+  unreliable by design — but timeout + bounded retry + raw-response
+  caching are kept anyway as standard defensive practice for any
+  network pipeline (protects against genuine transient blips, not just
+  this specific VPN issue).
+- Documented for future reference: if live endpoints hang again during
+  development, check VPN status before assuming an API-side problem.
+
 ## Next task
 1.3 Data pipeline — fetch.py
