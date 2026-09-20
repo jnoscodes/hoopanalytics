@@ -24,3 +24,18 @@ the API returns (e.g. team logo codes, roster-status flags are dropped).
   business logic. Relevant again in V2: per-game rate stats, not raw
   totals, are the natural inputs for the similarity/clustering features
   (2.1), so this decision will need revisiting there.
+
+## Task 1.7 — comparing players across different career lengths/eras
+
+The comparison page (`pages/1_Player_Comparison.py`) plots two players' full
+career PPG trends on one chart, with a toggle between two ways to align the
+x-axis: actual calendar season (`SEASON_ID`), or season number within each
+player's own career (1st season, 2nd season, ...). Calendar alignment
+answers "who was better in the same real-world year"; career-number
+alignment answers "how did their trajectories compare at the same career
+stage," which is the only fair comparison when two players' careers don't
+overlap in time at all (e.g. a player who retired before the other
+debuted). Both are kept, switchable, rather than picking one — relevant
+again for any future model that compares players across eras (a V2
+similarity model would face the same "raw season vs. career stage"
+alignment question when building features).

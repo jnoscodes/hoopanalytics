@@ -30,6 +30,11 @@ The first search for a player fetches live from the NBA Stats API and caches
 the result in `data/processed/hoopanalytics.db`; later searches for the same
 player read from that local database instead.
 
+Use the sidebar to switch to **Player Comparison**: pick two players, each
+with their own independently selected season (e.g. LeBron's 2025-26 vs.
+LaMelo's rookie year), and compare their per-game stats side by side, plus
+a career-long points-per-game trend chart.
+
 ## Project structure
 
 ```
