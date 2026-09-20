@@ -26,6 +26,30 @@ Completed task: 1.1 Repo setup
 - No `app.py`/Streamlit entry point yet — deferred to tasks 1.6–1.7 to
   avoid scope creep beyond 1.1.
 
+## Last session: 2026-09-20 (cont'd)
+Completed task: 1.2 API exploration in a notebook
+
+- Added `notebooks/api_exploration.ipynb`, executed with real outputs:
+  static player/team lookups (`nba_api.stats.static`) work instantly,
+  offline; three live `stats.nba.com` endpoints (`CommonPlayerInfo`,
+  `PlayerCareerStats`, `LeagueGameLog`) all `ReadTimeout` after 15s.
+- Root cause documented in the notebook: `stats.nba.com` sits behind
+  bot-protection that silently stalls/drops requests from datacenter and
+  cloud IP ranges — this is an IP-reputation issue (confirmed by testing
+  with `nba_api`'s own headers, which made no difference), not a missing
+  header or a code bug. Expected to work from a normal home network.
+- Added `requirements-dev.txt` (jupyter, ipykernel) as a dev-only
+  dependency, kept separate from the app's runtime `requirements.txt`.
+
+## Decisions made (1.2)
+- Selected endpoints for V1: static `players`/`teams` for id lookup,
+  `CommonPlayerInfo` + `PlayerCareerStats` for the profile/comparison
+  pages (1.6/1.7). `LeagueGameLog` explored but not used until V2.
+- `fetch.py` (task 1.3) will need to: throttle calls (~0.6-1s delay),
+  fail fast on timeout instead of hanging, cache raw responses to
+  `data/raw/`, and must be run from a normal network — not CI/cloud.
+  No proxy/VPN workaround chosen; deemed disproportionate for a
+  portfolio project when running locally solves it.
+
 ## Next task
-1.2 API exploration in a notebook (nba_api endpoints, limitations, rate
-limiting)
+1.3 Data pipeline — fetch.py
