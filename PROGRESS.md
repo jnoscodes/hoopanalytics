@@ -108,5 +108,37 @@ of origin") are superseded by this one.
 - Documented for future reference: if live endpoints hang again during
   development, check VPN status before assuming an API-side problem.
 
+## Last session: 2026-09-20 (cont'd)
+Completed task: 1.3 Data pipeline — fetch.py
+
+- Added `src/fetch.py`: `get_player_id()` (offline static lookup),
+  `fetch_player_info()` and `fetch_player_career_stats()` (live
+  `CommonPlayerInfo` / `PlayerCareerStats`, the two endpoints selected
+  in 1.2).
+- Each live fetch: checks `data/raw/` for a cached raw JSON response
+  first; on a miss, calls the endpoint with a 10s timeout and up to 3
+  retries (fails loudly with a clear error after exhausting retries,
+  instead of hanging); throttles with a 0.7s sleep between live calls;
+  saves the raw response to `data/raw/` on success.
+- Verified end-to-end against the live API: first run fetched both
+  endpoints live and wrote 2 cache files; second run completed in
+  ~1.6s (python startup only) by reading from cache, confirming no
+  redundant network calls.
+- Added `data/raw/*` (except `.gitkeep`) to `.gitignore` — cached raw
+  API responses are regenerable and shouldn't be committed.
+
+## Decisions made (1.3)
+- Retry/timeout/caching logic kept in `fetch.py` even though the root
+  cause turned out to be the VPN (see correction #2) — this is
+  standard defensive practice for any network-dependent pipeline stage,
+  not a workaround for one specific bug.
+- Raw responses cached as one JSON file per endpoint+player_id in
+  `data/raw/`, matching the fetch → clean → database pipeline split:
+  this stage only stores the untouched API response; parsing into
+  clean tabular data is `clean.py`'s job (task 1.4).
+- Fixed 0.7s throttle between live calls (not adaptive rate-limiting)
+  — simple and sufficient at this project's scale, though an adaptive
+  approach would be more robust to real rate limits if traffic grew.
+
 ## Next task
-1.3 Data pipeline — fetch.py
+1.4 Data pipeline — clean.py
