@@ -2,7 +2,7 @@
 
 ## V1 — Data + analysis foundation (minimum viable portfolio project)
 **Stack:** Python, nba_api, pandas, SQLite, Streamlit, Plotly
-- [ ] 1.1 Repo setup (folder structure, venv, .gitignore, minimal README)
+- [x] 1.1 Repo setup (folder structure, venv, .gitignore, minimal README)
 - [ ] 1.2 API exploration in a notebook (nba_api endpoints, limitations, rate limiting)
 - [ ] 1.3 Data pipeline — fetch.py
 - [ ] 1.4 Data pipeline — clean.py
