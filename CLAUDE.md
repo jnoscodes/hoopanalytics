@@ -50,3 +50,5 @@ Act as three combined roles throughout this project:
 - Remote origin is already configured and authenticated — push directly is fine.
 - After each validated commit, ask for confirmation before git push, unless
   explicitly told "push directly" in the prompt.
+- Never stack a new branch on an unmerged PR. Wait for the previous PR to be
+  merged into main, then branch fresh from main for the next task.
