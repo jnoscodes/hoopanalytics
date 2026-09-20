@@ -213,5 +213,51 @@ Completed task: 1.5 Data pipeline — database.py (SQLite schema + insertion)
   conflict resolution is simpler and the primary key already enforces
   uniqueness correctly.
 
+## Last session: 2026-09-21
+Completed task: 1.6 Streamlit — player profile page
+
+- Added `app.py` (repo root, Streamlit's entry point — deferred since
+  task 1.1). Text input to search a player by name; resolves via
+  `get_player_id()`, checks the SQLite DB first, and on a cache miss
+  runs the full `fetch -> clean -> insert` pipeline before reading
+  back. Displays bio metrics and a season-by-season table.
+- Resolved the 1.4 deferred decision here: per-game averages
+  (PPG/RPG/APG) are computed from season totals at display time in
+  `app.py` (`with_per_game_averages()`), not pushed back into
+  `clean.py`/`database.py`.
+- Added a Plotly line chart of points-per-game across a player's
+  career.
+- Added `.claude/launch.json` (Streamlit dev server config) to make
+  the app previewable/testable going forward.
+- Tested live in a browser (not just import-checked): verified a
+  cache-hit search (LeBron James, already in the DB), a cache-miss
+  search (Nikola Jokic — triggers a live fetch, insert, then display),
+  and an invalid name (shows a clean `st.error`, not a raw traceback).
+- **Bug found and fixed during testing:** `sqlite3.ProgrammingError:
+  SQLite objects created in a thread can only be used in that same
+  thread`. Streamlit reruns scripts on a thread pool, not one fixed
+  thread, so the `st.cache_resource`-cached connection from
+  `database.init_db()` broke on the second rerun. Fixed in
+  `src/database.py` by opening the connection with
+  `check_same_thread=False` — safe here since the app never issues
+  concurrent writes against it, only one query/insert at a time.
+- Updated `README.md` with a "Running the app" section (first
+  user-facing feature, per working rule 7).
+
+## Decisions made (1.6)
+- DB-first, pipeline-on-miss strategy: `database.py` is used as a real
+  cache by the app (fast path for repeat searches), not left idle —
+  first search for any given player is slower (live API + insert),
+  every later search for that player is a local read.
+- `st.cache_data` on the fetch-or-load function and `st.cache_resource`
+  on the DB connection — idiomatic Streamlit, avoids re-running the
+  whole lookup (or reopening the DB) on every widget interaction, not
+  just on a new search.
+- No shared "orchestration" module extracted yet for the
+  fetch-or-load-from-DB logic, even though 1.7 (comparison page) will
+  likely need the same thing — kept inline in `app.py` for now rather
+  than guessing at the right shared shape before a second caller
+  exists; revisit extraction when writing 1.7.
+
 ## Next task
-1.6 Streamlit — player profile page
+1.7 Streamlit — player comparison page
