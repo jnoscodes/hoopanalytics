@@ -19,6 +19,17 @@ source .venv/bin/activate  # on Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Running the app
+
+```bash
+streamlit run app.py
+```
+
+Search any NBA player by name to see their bio and season-by-season stats.
+The first search for a player fetches live from the NBA Stats API and caches
+the result in `data/processed/hoopanalytics.db`; later searches for the same
+player read from that local database instead.
+
 ## Project structure
 
 ```
