@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Cached raw API responses (regenerable via src/fetch.py, keep dir structure only)
+data/raw/*
+!data/raw/.gitkeep

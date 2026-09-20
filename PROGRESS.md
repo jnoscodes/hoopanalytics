@@ -74,5 +74,71 @@ writeup in `notebooks/api_exploration.ipynb`, "Findings" section.
   *causing* hangs. Documented as a manual fallback to try if `fetch.py`
   proves consistently unusable, not built into the project.
 
+## Correction #2 — 2026-09-20
+The correction above ("not IP/VPN-related, `stats.nba.com` just hangs
+regardless of origin") was itself built on a confounded test. The
+"home network, residential IP, outside the sandbox" retest that led to
+that conclusion was run on this same local machine, which had a US VPN
+active by default — so that retest was never actually off-VPN either.
+
+Retested properly this session: same three endpoints
+(`CommonPlayerInfo`, `PlayerCareerStats`, `LeagueGameLog`), same
+machine. First with the VPN on: all three `ReadTimeout` again,
+consistent with every prior attempt. Then the VPN was disabled,
+confirmed via a public-IP check (`ifconfig.me` returned a French
+residential IP, not the VPN's US exit node), and the three endpoints
+were re-run in a fresh Python process: all three succeeded in 2-4s
+each, no retry needed.
+
+**Corrected root cause: the US VPN was breaking these endpoints.**
+`stats.nba.com` is not inherently flaky in general — it responds
+quickly on a direct connection. This matches a separately known
+community report ([#30](https://github.com/swar/nba_api/issues/30))
+that a VPN can *cause* hangs on these endpoints, rather than being a
+workaround for cloud-IP blocking as originally assumed. Both prior
+explanations (cloud-IP blocking, then "hangs unpredictably regardless
+of origin") are superseded by this one.
+
+## Decisions made (correction #2)
+- `fetch.py` (1.3) no longer needs to assume the API is fundamentally
+  unreliable by design — but timeout + bounded retry + raw-response
+  caching are kept anyway as standard defensive practice for any
+  network pipeline (protects against genuine transient blips, not just
+  this specific VPN issue).
+- Documented for future reference: if live endpoints hang again during
+  development, check VPN status before assuming an API-side problem.
+
+## Last session: 2026-09-20 (cont'd)
+Completed task: 1.3 Data pipeline — fetch.py
+
+- Added `src/fetch.py`: `get_player_id()` (offline static lookup),
+  `fetch_player_info()` and `fetch_player_career_stats()` (live
+  `CommonPlayerInfo` / `PlayerCareerStats`, the two endpoints selected
+  in 1.2).
+- Each live fetch: checks `data/raw/` for a cached raw JSON response
+  first; on a miss, calls the endpoint with a 10s timeout and up to 3
+  retries (fails loudly with a clear error after exhausting retries,
+  instead of hanging); throttles with a 0.7s sleep between live calls;
+  saves the raw response to `data/raw/` on success.
+- Verified end-to-end against the live API: first run fetched both
+  endpoints live and wrote 2 cache files; second run completed in
+  ~1.6s (python startup only) by reading from cache, confirming no
+  redundant network calls.
+- Added `data/raw/*` (except `.gitkeep`) to `.gitignore` — cached raw
+  API responses are regenerable and shouldn't be committed.
+
+## Decisions made (1.3)
+- Retry/timeout/caching logic kept in `fetch.py` even though the root
+  cause turned out to be the VPN (see correction #2) — this is
+  standard defensive practice for any network-dependent pipeline stage,
+  not a workaround for one specific bug.
+- Raw responses cached as one JSON file per endpoint+player_id in
+  `data/raw/`, matching the fetch → clean → database pipeline split:
+  this stage only stores the untouched API response; parsing into
+  clean tabular data is `clean.py`'s job (task 1.4).
+- Fixed 0.7s throttle between live calls (not adaptive rate-limiting)
+  — simple and sufficient at this project's scale, though an adaptive
+  approach would be more robust to real rate limits if traffic grew.
+
 ## Next task
-1.3 Data pipeline — fetch.py
+1.4 Data pipeline — clean.py
