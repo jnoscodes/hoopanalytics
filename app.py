@@ -1,55 +1,11 @@
 """HoopAnalytics — Streamlit app entry point. V1: player profile page."""
 
-import sqlite3
-
-import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src.clean import clean_career_stats, clean_player_bio
-from src.database import init_db, insert_career_stats, insert_player_bio
-from src.fetch import fetch_player_career_stats, fetch_player_info, get_player_id
+from src.pipeline import get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
 
 st.set_page_config(page_title="HoopAnalytics", page_icon="🏀")
-
-
-@st.cache_resource
-def get_connection() -> sqlite3.Connection:
-    return init_db()
-
-
-@st.cache_data(show_spinner="Loading player data...")
-def get_or_build_player(_conn: sqlite3.Connection, name: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (bio_df, stats_df) for a player, reading from the DB if cached there,
-    otherwise running the fetch -> clean -> insert pipeline first."""
-    player_id = get_player_id(name)
-
-    bio_df = pd.read_sql(
-        "SELECT * FROM players WHERE PERSON_ID = ?", _conn, params=(player_id,)
-    )
-    if bio_df.empty:
-        bio_df = clean_player_bio(fetch_player_info(player_id))
-        stats_df = clean_career_stats(fetch_player_career_stats(player_id))
-        insert_player_bio(_conn, bio_df)
-        insert_career_stats(_conn, stats_df)
-    else:
-        stats_df = pd.read_sql(
-            "SELECT * FROM career_stats WHERE PLAYER_ID = ? ORDER BY SEASON_ID",
-            _conn,
-            params=(player_id,),
-        )
-
-    return bio_df, stats_df
-
-
-def with_per_game_averages(stats_df: pd.DataFrame) -> pd.DataFrame:
-    """Add PPG/RPG/APG columns computed from season totals (display-time only)."""
-    df = stats_df.copy()
-    df["PPG"] = (df["PTS"] / df["GP"]).round(1)
-    df["RPG"] = (df["REB"] / df["GP"]).round(1)
-    df["APG"] = (df["AST"] / df["GP"]).round(1)
-    return df
-
 
 st.title("🏀 HoopAnalytics")
 st.caption("Player profile — search any NBA player by name.")
@@ -65,7 +21,10 @@ if player_name:
     else:
         bio = bio_df.iloc[0]
 
-        st.header(bio["DISPLAY_FIRST_LAST"])
+        photo_col, header_col = st.columns([1, 3])
+        photo_col.image(get_headshot_url(bio["PERSON_ID"]))
+        header_col.header(bio["DISPLAY_FIRST_LAST"])
+
         cols = st.columns(4)
         cols[0].metric("Team", bio["TEAM_NAME"])
         cols[1].metric("Position", bio["POSITION"])
