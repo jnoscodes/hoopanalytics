@@ -140,5 +140,39 @@ Completed task: 1.3 Data pipeline — fetch.py
   — simple and sufficient at this project's scale, though an adaptive
   approach would be more robust to real rate limits if traffic grew.
 
+## Last session: 2026-09-20 (cont'd)
+Completed task: 1.4 Data pipeline — clean.py
+
+- Added `src/clean.py`: `clean_player_bio()` and `clean_career_stats()`,
+  reshaping the raw JSON from `fetch.py` (headers + rowSet arrays) into
+  typed pandas DataFrames, selecting only the fields relevant to V1's
+  profile/comparison pages.
+- `HEIGHT` converted from the API's `"6-9"` string to total inches
+  (the one real cleaning transformation); `BIRTHDATE` coerced to
+  datetime; everything else is column selection.
+- `clean_career_stats()` uses `SeasonTotalsRegularSeason` only —
+  postseason/all-star/college/showcase and the separate rankings/highs
+  result sets are left unused, matching the 1.2 endpoint-selection
+  decision.
+- Verified against the live cached data (LeBron James, 23 seasons):
+  bio row and full season-by-season table both render with correct
+  values and dtypes.
+- Logged the field-selection scope and the deferred per-game-average
+  decision in `docs/methodology.md`, since it's relevant again for V2
+  feature engineering (2.1).
+
+## Decisions made (1.4)
+- Went with option (A) from the two presented: `clean.py` stays limited
+  to reshaping/typing the API's own fields — no derived stats. Season
+  totals (not per-game averages) are what's returned; PPG/RPG/APG are
+  genuinely the more interesting display data and will need to be
+  computed eventually, but deliberately deferred to `database.py` or
+  the Streamlit layer, not decided unilaterally to add here.
+- No error handling added for missing/malformed `HEIGHT` values (e.g.
+  a hypothetical player with no height on record) — not something the
+  selected endpoints have been observed to return, and speculative
+  handling for an unconfirmed case isn't worth the complexity at this
+  stage. Flagged here as a known gap if it surfaces later.
+
 ## Next task
-1.4 Data pipeline — clean.py
+1.5 Data pipeline — database.py
