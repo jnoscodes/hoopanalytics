@@ -6,7 +6,7 @@
 - [x] 1.2 API exploration in a notebook (nba_api endpoints, limitations, rate limiting)
 - [x] 1.3 Data pipeline — fetch.py
 - [x] 1.4 Data pipeline — clean.py
-- [ ] 1.5 Data pipeline — database.py (SQLite schema + insertion)
+- [x] 1.5 Data pipeline — database.py (SQLite schema + insertion)
 - [ ] 1.6 Streamlit — player profile page
 - [ ] 1.7 Streamlit — player comparison page
 - [ ] 1.8 Complete v1 README

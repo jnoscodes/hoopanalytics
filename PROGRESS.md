@@ -174,5 +174,44 @@ Completed task: 1.4 Data pipeline — clean.py
   handling for an unconfirmed case isn't worth the complexity at this
   stage. Flagged here as a known gap if it surfaces later.
 
+## Last session: 2026-09-20 (cont'd)
+Completed task: 1.5 Data pipeline — database.py (SQLite schema + insertion)
+
+- Added `src/database.py`: `init_db()` creates two tables —
+  `players` (PK `PERSON_ID`) and `career_stats` (composite PK
+  `PLAYER_ID, SEASON_ID`, FK `PLAYER_ID` -> `players.PERSON_ID`) —
+  modeling the real one-player-to-many-seasons relationship.
+  `insert_player_bio()` / `insert_career_stats()` write a cleaned
+  DataFrame from `clean.py` into the matching table via
+  `INSERT OR REPLACE`, so re-running the pipeline for a player updates
+  their rows instead of duplicating or erroring.
+- Hit and fixed a real bug while verifying: `sqlite3` can't bind a
+  pandas `Timestamp` directly (`clean_player_bio()`'s `BIRTHDATE`
+  column) — added `_row_for_sqlite()` to convert it to an ISO string
+  at insertion time, keeping the `datetime` dtype in `clean.py`'s
+  output (useful for pandas/Streamlit) while satisfying `sqlite3`'s
+  driver.
+- Verified end-to-end: first run created `data/processed/hoopanalytics.db`
+  with 1 player row and 23 season rows; second run against the same
+  player left both counts unchanged, confirming `INSERT OR REPLACE`
+  works as intended.
+- **Correction to the 1.1 log:** that entry claimed `.gitignore`
+  "already covers ... `*.db`" — checked while verifying this task, and
+  that's inaccurate; only Django's `db.sqlite3` was covered, not a
+  general `*.db`/`data/processed/` pattern. Added
+  `data/processed/*` (except `.gitkeep`) to `.gitignore` now that
+  `database.py` actually produces a `.db` file there.
+
+## Decisions made (1.5)
+- Chose explicit `sqlite3` + hand-written `CREATE TABLE` schema over
+  `DataFrame.to_sql()` (option A over B, as discussed) — more code, but
+  a real, explainable schema with primary/foreign keys, matching what
+  the roadmap task ("SQLite schema + insertion") implies is wanted.
+- `INSERT OR REPLACE` chosen for idempotency over a plain `INSERT`
+  (which would error on re-running the pipeline for an existing
+  player/season) or a manual check-then-update — SQLite's built-in
+  conflict resolution is simpler and the primary key already enforces
+  uniqueness correctly.
+
 ## Next task
-1.5 Data pipeline — database.py
+1.6 Streamlit — player profile page

@@ -220,3 +220,7 @@ __marimo__/
 # Cached raw API responses (regenerable via src/fetch.py, keep dir structure only)
 data/raw/*
 !data/raw/.gitkeep
+
+# SQLite database (regenerable via src/database.py, keep dir structure only)
+data/processed/*
+!data/processed/.gitkeep
