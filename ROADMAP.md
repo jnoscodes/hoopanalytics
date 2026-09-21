@@ -9,7 +9,7 @@
 - [x] 1.5 Data pipeline — database.py (SQLite schema + insertion)
 - [x] 1.6 Streamlit — player profile page
 - [x] 1.7 Streamlit — player comparison page
-- [ ] 1.8 Complete v1 README
+- [x] 1.8 Complete v1 README
 - [ ] 1.9 GitHub release tagged v1.0
 
 ## V2 — Machine Learning
