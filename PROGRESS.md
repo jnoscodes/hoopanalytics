@@ -346,5 +346,37 @@ Completed task: 1.8 Complete v1 README
   the app or its tests depend on, so it isn't captured in any script
   checked into the repo.
 
+## Roadmap change — 2026-09-22
+Inserted a new task, 1.9 "Deploy to Streamlit Community Cloud," before
+the release tag (now renumbered 1.9 -> 1.10). Prompted by a question
+about whether a recruiter could actually see the app running, not just
+read the code — right now the repo has no live link.
+
+Discussed and ruled out a false shortcut: this isn't something V4's
+planned Docker + Render/Fly.io deployment would avoid either — the
+underlying risk (`stats.nba.com` blocking datacenter/cloud IP ranges,
+separately documented per the 1.2 investigation) applies to any cloud
+host, not something specific to Streamlit Community Cloud. Waiting for
+V4 would only delay the same decision, not avoid it.
+
+Decided to deploy bare first (no pre-seeded data) and empirically test
+whether an uncached player search actually fails from the live host,
+rather than assume a failure and add defensive seeding for an
+unconfirmed risk — consistent with how the 1.2 VPN root cause was
+established (test, don't theorize).
+
+## Decisions made (roadmap change)
+- Pinned `requirements.txt` to the exact locally-verified versions
+  (`nba_api==1.11.4`, `pandas==3.0.6`, `streamlit==1.64.0`,
+  `plotly==7.1.0`) instead of unpinned bare names — a fresh cloud
+  deploy installing latest-at-deploy-time versions would be an
+  unnecessary reproducibility risk, unrelated to the actual thing being
+  tested (cloud-IP blocking).
+- No `runtime.txt` added — Streamlit Community Cloud's Python version
+  is chosen via its own UI at deploy time, and `runtime.txt` support is
+  inconsistent/deprecated there; nothing in this codebase requires a
+  specific Python version above 3.10 (the newest syntax used is PEP
+  604 `X | Y` unions and built-in generic type hints like `tuple[...]`).
+
 ## Next task
-1.9 GitHub release tagged v1.0
+1.9 Deploy to Streamlit Community Cloud (live demo link)
