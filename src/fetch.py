@@ -19,7 +19,7 @@ from nba_api.stats.static import players
 
 RAW_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 
-REQUEST_TIMEOUT = 10
+REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 THROTTLE_SECONDS = 0.7
 
