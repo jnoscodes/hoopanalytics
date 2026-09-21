@@ -307,5 +307,44 @@ Completed task: 1.7 Streamlit — player comparison page
   `st.navigation`/`st.Page` API, a bigger structural change than this
   task's scope — not done now to avoid scope creep beyond 1.7.
 
+## Last session: 2026-09-21 (cont'd)
+Completed task: 1.8 Complete v1 README
+
+- Rewrote `README.md` from a bare-bones setup guide into a complete v1
+  README: overview/motivation, a features list, an architecture diagram
+  (fetch → clean → database → pipeline → app, in ASCII), two embedded
+  screenshots, a "known limitations" section (the `stats.nba.com`/VPN
+  investigation, the unofficial headshot CDN, no tests yet), an updated
+  project structure (now includes `app.py`, `pages/`, `src/pipeline.py`),
+  and an unofficial-project/NBA disclaimer.
+- Added real screenshots at `docs/images/profile.png` and
+  `docs/images/comparison.png` — the first binary assets committed to
+  the repo.
+- Small fix while producing the screenshots: `app.py`'s headshot was
+  missing the explicit `width=150` that the comparison page already had
+  — added for consistency between the two pages.
+- **Screenshot capture had a real complication worth logging:** headless
+  Chrome (and headless Edge) could not load the external NBA headshot
+  CDN image when driven via CLI (`ERR_HTTP2_PROTOCOL_ERROR`), even
+  though the same URL works fine in interactive browser testing and via
+  plain `curl`/`requests` from this machine — narrowed down through
+  several tests (disabling HTTP/2, legacy headless mode, no-sandbox, a
+  standard user-agent — none fixed it) to a headless-Chromium-specific
+  networking quirk on this machine, unrelated to the app. Worked around
+  it by downloading the real headshot images directly via Python
+  `requests` (which has no such issue) and compositing them onto the
+  headless-captured page screenshots with Pillow, positioned and sized
+  to fit the actual reserved layout space without disturbing the rest
+  of the page.
+
+## Decisions made (1.8)
+- Screenshots included (per explicit go-ahead) rather than text-only —
+  judged worth the added repo complexity (first binary assets) for a
+  portfolio README's first impression.
+- Kept the headless-Chrome + Pillow-composite approach documented here
+  as a one-off doc-generation step, not as tooling — it's not something
+  the app or its tests depend on, so it isn't captured in any script
+  checked into the repo.
+
 ## Next task
-1.8 Complete v1 README
+1.9 GitHub release tagged v1.0
