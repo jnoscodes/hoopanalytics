@@ -22,7 +22,7 @@ if player_name:
         bio = bio_df.iloc[0]
 
         photo_col, header_col = st.columns([1, 3])
-        photo_col.image(get_headshot_url(bio["PERSON_ID"]))
+        photo_col.image(get_headshot_url(bio["PERSON_ID"]), width=150)
         header_col.header(bio["DISPLAY_FIRST_LAST"])
 
         cols = st.columns(4)
