@@ -2,3 +2,4 @@ nba_api==1.11.4
 pandas==3.0.6
 streamlit==1.64.0
 plotly==7.1.0
+streamlit-searchbox==0.1.24

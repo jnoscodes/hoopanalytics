@@ -3,8 +3,12 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from streamlit_searchbox import st_searchbox
 
-from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
+from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, search_players, with_per_game_averages
+
+LEBRON_JAMES_ID = 2544
+LAMELO_BALL_ID = 1630163
 
 st.set_page_config(page_title="HoopAnalytics — Comparison", page_icon="🆚")
 
@@ -14,19 +18,21 @@ st.caption("Compare two players, each on their own selected season.")
 conn = get_connection()
 
 
-def render_player_column(column, label: str, default_name: str, key_prefix: str):
+def render_player_column(column, label: str, default_id: int, default_name: str, key_prefix: str):
     """Render one player's inputs/bio/season picker; return (display_name, season_row, full_stats) or None."""
     with column:
-        name = st.text_input(f"Player {label}", value=default_name, key=f"{key_prefix}_name")
-        if not name:
+        person_id = st_searchbox(
+            search_players,
+            label=f"Player {label}",
+            placeholder="Search for a player...",
+            default=default_id,
+            default_searchterm=default_name,
+            key=f"{key_prefix}_search",
+        )
+        if not person_id:
             return None
 
-        try:
-            bio_df, stats_df = get_or_build_player(conn, name)
-        except ValueError as exc:
-            st.error(str(exc))
-            return None
-
+        bio_df, stats_df = get_or_build_player(conn, person_id)
         bio = bio_df.iloc[0]
         stats_df = with_per_game_averages(stats_df).sort_values("SEASON_ID").reset_index(drop=True)
 
@@ -54,8 +60,8 @@ def render_player_column(column, label: str, default_name: str, key_prefix: str)
 
 
 col_a, col_b = st.columns(2)
-result_a = render_player_column(col_a, "A", "LeBron James", "a")
-result_b = render_player_column(col_b, "B", "LaMelo Ball", "b")
+result_a = render_player_column(col_a, "A", LEBRON_JAMES_ID, "LeBron James", "a")
+result_b = render_player_column(col_b, "B", LAMELO_BALL_ID, "LaMelo Ball", "b")
 
 if result_a and result_b:
     name_a, season_a, stats_a = result_a
