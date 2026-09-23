@@ -49,5 +49,8 @@ if player_name:
 
         st.subheader("Points per game over career")
         fig = px.line(display_stats, x="SEASON_ID", y="PPG", markers=True)
+        # Force categorical: Plotly auto-detects "2001-02"-style strings as
+        # dates, silently dropping any season whose second half isn't 01-12.
+        fig.update_xaxes(type="category")
         fig.update_layout(xaxis_title="Season", yaxis_title="Points per game")
         st.plotly_chart(fig, width="stretch")

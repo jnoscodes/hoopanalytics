@@ -87,5 +87,9 @@ if result_a and result_b:
     x_title = "Season" if x_mode == "Calendar season" else "Season # in career"
 
     line_fig = px.line(combined, x=x_col, y="PPG", color="Player", markers=True)
+    # Force categorical: Plotly auto-detects "2001-02"-style SEASON_ID
+    # strings as dates, silently dropping any season whose second half
+    # isn't 01-12.
+    line_fig.update_xaxes(type="category")
     line_fig.update_layout(xaxis_title=x_title, yaxis_title="Points per game")
     st.plotly_chart(line_fig, width="stretch")
