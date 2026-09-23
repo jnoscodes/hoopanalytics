@@ -39,3 +39,24 @@ debuted). Both are kept, switchable, rather than picking one — relevant
 again for any future model that compares players across eras (a V2
 similarity model would face the same "raw season vs. career stage"
 alignment question when building features).
+
+## Task 1.9 — pre-seed criterion: active players, not a season cutoff
+
+`stats.nba.com` blocks requests from AWS/GCP/Azure datacenter IP ranges
+(confirmed via the Streamlit Community Cloud deploy investigation, see
+`PROGRESS.md`), which nearly every cloud host runs on top of. Until a
+relay/proxy fix is affordable, the deployed app's database is pre-seeded
+via `src/seed.py` so it works reliably without depending on a live call
+for every new search.
+
+Considered seeding by an arbitrary season cutoff (e.g. "players active
+since 1996-97, dropping any of their stats from before that"), but chose
+`nba_api`'s `get_active_players()` instead -- every player on a current
+NBA roster (530 people). Reasoning: an arbitrary date cutoff needs manual
+revisiting every season and would produce oddly truncated career stats
+for players whose careers straddle the cutoff (a player who debuted in
+1994 would show only their post-1996 seasons, which reads as a data bug,
+not a deliberate scope choice). "Currently active" is self-updating in
+spirit (re-running `src/seed.py` each season naturally tracks the current
+roster) and matches who a visitor is actually likely to search for, with
+full, untruncated career stats for everyone included.

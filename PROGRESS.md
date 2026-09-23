@@ -378,5 +378,132 @@ established (test, don't theorize).
   specific Python version above 3.10 (the newest syntax used is PEP
   604 `X | Y` unions and built-in generic type hints like `tuple[...]`).
 
+## Investigation — 2026-09-22/23: cloud-IP blocking, confirmed
+
+Deployed bare to Streamlit Community Cloud as planned and tested a fresh
+(uncached) player search live. It failed. The full investigation:
+
+1. **First test, in-app error (redacted):** the app's own error display
+   redacts exception details for anyone who isn't the app owner (a
+   Streamlit Cloud privacy feature, not a bug). The redacted traceback
+   bottomed out in `http.client._read_status()`, which I initially (and
+   wrongly) read as evidence of a connection being reset/interfered with
+   mid-response.
+2. **Correction:** the user pulled the real unredacted log from "Manage
+   app". The actual root exception was a plain
+   `ReadTimeout: ... Read timed out. (read timeout=10)` — identical in
+   shape to every timeout seen throughout this project (1.2, and local
+   VPN testing). My "connection reset" reading was an overreach from
+   incomplete (redacted) evidence; flagged and corrected in-session.
+3. **Diagnostic test:** a plain read timeout can't distinguish "NBA is
+   blocking this IP" from "the path is just slower than 10s." Bumped
+   `REQUEST_TIMEOUT` 10s -> 30s (task branch
+   `experiment/longer-fetch-timeout`) as a controlled test. Result: it
+   still failed, but took ~90s instead of ~20s -- roughly proportional to
+   the 3x longer timeout, using the *entire* budget on all 3 attempts
+   every time. That pattern (never succeeding early, always using the
+   full budget) is much stronger evidence of a silent drop (no response
+   ever arrives) than of a merely-slow connection. Reverted the timeout
+   back to 10s afterward -- 30s didn't help and only made failures 3x
+   slower to report.
+4. **Research confirmed this is a known, industry-wide problem, not
+   specific to Streamlit Community Cloud:** `stats.nba.com` sits behind
+   Akamai bot protection that blocks by IP range and TLS fingerprint, and
+   specifically blacklists **AWS, GCP, and Azure** datacenter ranges.
+   Nearly every popular PaaS (Render, Fly.io, Railway, Streamlit Cloud,
+   Heroku) runs its compute on top of one of those three hyperscalers, so
+   this was never going to be fixable by switching cloud hosts, including
+   V4's originally planned Render/Fly.io.
+5. **Considered and ruled out an alternative data source
+   (`balldontlie.io`):** commonly suggested specifically because it
+   doesn't have this blocking problem. Checked its docs directly: the
+   free tier only covers Teams/Players/Games -- season/career stats
+   require a paid plan ($9.99+/mo). Not a real free fix; ruled out rather
+   than recommended on the strength of its reputation alone.
+
+## Decision — pre-seed now, real fix (relay) deferred for cost
+
+The actual documented community fix is a small relay/proxy server hosted
+*outside* AWS/GCP/Azure IP ranges, with the cloud app routing its
+`stats.nba.com` calls through it. This is the right long-term fix (cheap,
+~$4-5/mo on a non-hyperscaler VPS like Hetzner/OVH/Linode, and reusable
+for V4) but a real recurring cost, so it's deferred until there's budget
+for it -- **this is a goal for a future session, not abandoned.**
+
+For now: pre-seed the deployed database with every currently active NBA
+player (`nba_api.stats.static.players.get_active_players()`, 530 people)
+via a new `src/seed.py`, committed as `data/seed/hoopanalytics_seed.db`.
+`database.init_db()` bootstraps a fresh runtime database from this seed
+file if one doesn't exist yet (first deploy, or any environment with an
+empty `data/processed/`), while leaving the regular runtime db gitignored
+and regenerable as before -- this is a deliberate, documented exception
+to "the cache is regenerable, not committed," not a quiet departure from
+it.
+
+"Active players" was chosen over an arbitrary season cutoff (e.g. "1990s
+onward") because it's a principled, self-relevant, self-updating
+criterion -- it covers who a visitor is actually likely to search for --
+rather than an arbitrary date that would need to be revisited every
+season regardless.
+
+Two real bugs hit and fixed while building the seeding script:
+- Backgrounded/redirected Python processes on this machine default stdout
+  to `cp1252` on Windows, which can't encode non-ASCII characters in
+  player names (e.g. Jokić) -- crashed the run partway through. Fixed
+  with `sys.stdout.reconfigure(encoding="utf-8")`.
+- Made the seeding script resumable (skips players already present in the
+  seed db) after the above crash lost an otherwise-clean run partway
+  through -- valuable independent of that specific bug, since a
+  ~500-player run against a real, sometimes-flaky API will hit transient
+  failures.
+- Separately, mid-session, `pandas` stopped importing entirely (a Windows
+  Application Control policy had quarantined/blocked one of its compiled
+  files) -- unrelated to this project's code, resolved by the user
+  re-enabling Windows Security.
+
+## Decision — add a getting-started tutorial
+
+This project is going on a CV/resume, and a GitHub repo alone isn't
+enough for a recruiter or anyone non-technical to actually *use* it, not
+just read about it. Added `docs/GETTING_STARTED.md`: a beginner-level,
+step-by-step guide (installing Python/Git, downloading the project,
+running it) with real screenshots of each external page involved (Python
+downloads, Git downloads, the GitHub repo's Code button), assuming no
+prior command-line experience. Linked from the main README.
+
+## Seeding results and a real bug it surfaced
+
+Ran `src/seed.py` against all 530 active players (locally, off the VPN
+confirmed clean back in the 1.2 investigation). Final seed:
+**530 players, 2,937 career-stats rows, ~385KB.**
+
+Two players (Eli John Ndiaye, Nikola Đurišić — both very recent
+international signees with minimal bio data on record) crashed
+`_height_to_inches()` with an empty `HEIGHT` string: exactly the gap
+flagged as a known risk back in task 1.4 ("no error handling added for
+missing/malformed HEIGHT values... flagged here as a known gap if it
+surfaces later"). It surfaced. Fixed in `src/clean.py` (returns `None`
+for an empty/missing height instead of crashing) and added
+`pipeline.format_height()` so the UI shows "Unknown" instead of "None
+in". Both players re-seeded successfully afterward.
+
+Same two players also have blank `WEIGHT` and a literal `"Undrafted"`
+`DRAFT_YEAR`/`ROUND`/`NUMBER` (a real, valid API value, not a bug) —
+displays a little unpolished (blank weight, truncated "Undrafted" text)
+but doesn't crash. Left as-is: a genuinely rare long-tail case (2 of
+530, both zero-career-games players) not worth further engineering time
+against right now.
+
+## Task 1.9 complete: live demo deployed, pre-seeded, documented, tutorial added
+
+Summary of everything above: deployed to
+[hoopanalytics.streamlit.app](https://hoopanalytics.streamlit.app/),
+diagnosed and confirmed a real cloud-IP-blocking limitation (not
+worked around blindly), pre-seeded the deployed database with all 530
+active NBA players so the live demo is reliable in practice, fixed a
+real bug the seeding run surfaced, and added a full getting-started
+tutorial so the project is actually usable by a non-technical visitor,
+not just readable.
+
 ## Next task
-1.9 Deploy to Streamlit Community Cloud (live demo link)
+1.10 GitHub release tagged v1.0.0

@@ -55,8 +55,16 @@ def _result_set_to_df(raw_json: dict, result_set_name: str) -> pd.DataFrame:
     return pd.DataFrame(result_set["rowSet"], columns=result_set["headers"])
 
 
-def _height_to_inches(height: str) -> int:
-    """Convert a "feet-inches" height string (e.g. "6-9") to total inches."""
+def _height_to_inches(height: str) -> int | None:
+    """Convert a "feet-inches" height string (e.g. "6-9") to total inches.
+
+    Some players (typically recent international draftees without full bio
+    data on record yet) have an empty HEIGHT string rather than "F-I" -- a
+    gap flagged as a known risk back in task 1.4 and confirmed for real
+    while seeding active players (2/530: Eli John Ndiaye, Nikola Đurišić).
+    """
+    if not height:
+        return None
     feet, inches = height.split("-")
     return int(feet) * 12 + int(inches)
 

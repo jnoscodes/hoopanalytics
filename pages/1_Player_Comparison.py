@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src.pipeline import get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
+from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
 
 st.set_page_config(page_title="HoopAnalytics — Comparison", page_icon="🆚")
 
@@ -32,7 +32,7 @@ def render_player_column(column, label: str, default_name: str, key_prefix: str)
 
         st.image(get_headshot_url(bio["PERSON_ID"]), width=150)
         st.subheader(bio["DISPLAY_FIRST_LAST"])
-        st.caption(f'{bio["TEAM_NAME"]} · {bio["POSITION"]} · {bio["HEIGHT"]} in · {bio["WEIGHT"]} lb')
+        st.caption(f'{bio["TEAM_NAME"]} · {bio["POSITION"]} · {format_height(bio["HEIGHT"])} · {bio["WEIGHT"]} lb')
 
         seasons = stats_df["SEASON_ID"].tolist()
         season = st.selectbox(

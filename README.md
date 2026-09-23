@@ -24,6 +24,11 @@ a notebook analysis.
 |---|---|
 | ![Player profile page](docs/images/profile.png) | ![Player comparison page](docs/images/comparison.png) |
 
+## Try it
+
+- **Live demo:** [hoopanalytics.streamlit.app](https://hoopanalytics.streamlit.app/) — no install needed. Pre-seeded with every player on a current NBA roster, so most searches work instantly.
+- **Run it yourself:** see [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for a step-by-step guide with screenshots, no prior Python/Git experience assumed.
+
 ## Architecture
 
 ```
@@ -66,12 +71,19 @@ Search any NBA player by name on the **Player Profile** page, or switch to
 
 ## Known limitations
 
-- The live `stats.nba.com` endpoints used by `nba_api` can hang or time
-  out under some network conditions (in this project's case, a VPN was
-  the actual cause — see `PROGRESS.md` for the full investigation).
-  `fetch.py` handles this with a short timeout and bounded retries, but a
-  sustained outage on NBA's end would still make new (uncached) player
-  lookups fail.
+- **`stats.nba.com` blocks cloud-hosted requests.** Confirmed (not just
+  suspected) via the live deploy: NBA's live stats API sits behind bot
+  protection that blocks AWS/GCP/Azure datacenter IP ranges — which
+  nearly every cloud host, including Streamlit Community Cloud, runs on
+  top of. This means a *new* (uncached) player search on the live demo
+  can fail. Worked around for now by pre-seeding the deployed database
+  with every player on a current NBA roster (`src/seed.py`) — most
+  searches work reliably; a genuinely new/very old player might not. The
+  real fix (routing requests through a small relay hosted outside those
+  three cloud providers) is a planned future addition — see
+  `PROGRESS.md`. Running the app locally (no cloud-IP restriction) always
+  works for any player — see
+  [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
 - Player headshots are loaded from an unofficial NBA CDN URL pattern (not
   part of `nba_api`'s documented endpoints). If NBA changes that URL
   scheme, only the photos would break, not the stats.
@@ -88,11 +100,13 @@ src/
   clean.py       # raw JSON -> typed DataFrames
   database.py    # SQLite schema + insertion
   pipeline.py    # Streamlit-facing DB-first lookup, shared by all pages
+  seed.py        # builds the committed seed database (active players)
 data/
   raw/           # cached raw API responses (gitignored)
-  processed/     # SQLite database (gitignored)
+  processed/     # SQLite database (gitignored, bootstrapped from seed)
+  seed/          # committed seed database (active players, see src/seed.py)
 notebooks/       # exploratory notebooks
-docs/            # methodology notes and README images
+docs/            # methodology notes, README images, getting-started guide
 tests/           # automated tests (not yet populated)
 ```
 

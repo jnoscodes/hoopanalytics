@@ -7,14 +7,24 @@ Two tables:
 
 Inserts use INSERT OR REPLACE so re-running the pipeline for a player
 updates their existing rows instead of duplicating or erroring.
+
+A fresh deploy has no runtime database yet, and stats.nba.com blocks
+requests from the major cloud hosting providers (see PROGRESS.md), so a
+first live search on a cloud deploy is unreliable. init_db() works around
+this by bootstrapping a fresh runtime database from a committed seed
+snapshot (data/seed/hoopanalytics_seed.db, built by src/seed.py) covering
+all currently active NBA players, if one exists and no runtime database has
+been created yet.
 """
 
+import shutil
 import sqlite3
 from pathlib import Path
 
 import pandas as pd
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "hoopanalytics.db"
+SEED_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / "hoopanalytics_seed.db"
 
 CREATE_PLAYERS_TABLE = """
 CREATE TABLE IF NOT EXISTS players (
@@ -68,6 +78,8 @@ def init_db(db_path: Path = DB_PATH) -> sqlite3.Connection:
     concurrent writes from multiple threads at once.
     """
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    if not db_path.exists() and SEED_DB_PATH.exists():
+        shutil.copy(SEED_DB_PATH, db_path)
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.execute(CREATE_PLAYERS_TABLE)
     conn.execute(CREATE_CAREER_STATS_TABLE)
