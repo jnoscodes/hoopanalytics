@@ -11,7 +11,7 @@
 - [x] 1.7 Streamlit — player comparison page
 - [x] 1.8 Complete v1 README
 - [x] 1.9 Deploy to Streamlit Community Cloud (live demo link)
-- [ ] 1.10 GitHub release tagged v1.0.0
+- [x] 1.10 GitHub release tagged v1.0.0
 
 ## V2 — Machine Learning
 **Stack:** + scikit-learn (clustering, cosine similarity, regression/classification)
