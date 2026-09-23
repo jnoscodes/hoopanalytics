@@ -51,6 +51,11 @@ if person_id:
             ["SEASON_ID", "TEAM_ABBREVIATION", "GP", "PPG", "RPG", "APG", "FG_PCT", "FG3_PCT", "FT_PCT"]
         ],
         hide_index=True,
+        column_config={
+            "FG_PCT": st.column_config.NumberColumn("FG_PCT", format="percent"),
+            "FG3_PCT": st.column_config.NumberColumn("FG3_PCT", format="percent"),
+            "FT_PCT": st.column_config.NumberColumn("FT_PCT", format="percent"),
+        },
     )
 
     st.subheader("Points per game over career")

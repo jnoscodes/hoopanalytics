@@ -52,9 +52,9 @@ def render_player_column(column, label: str, default_id: int, default_name: str,
         m3.metric("APG", season_row["APG"])
 
         m1, m2, m3 = st.columns(3)
-        m1.metric("FG%", f'{season_row["FG_PCT"]:.3f}')
-        m2.metric("3P%", f'{season_row["FG3_PCT"]:.3f}')
-        m3.metric("FT%", f'{season_row["FT_PCT"]:.3f}')
+        m1.metric("FG%", f'{season_row["FG_PCT"] * 100:.1f}%')
+        m2.metric("3P%", f'{season_row["FG3_PCT"] * 100:.1f}%')
+        m3.metric("FT%", f'{season_row["FT_PCT"] * 100:.1f}%')
 
         return bio["DISPLAY_FIRST_LAST"], season_row, stats_df
 
