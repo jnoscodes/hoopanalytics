@@ -505,5 +505,32 @@ real bug the seeding run surfaced, and added a full getting-started
 tutorial so the project is actually usable by a non-technical visitor,
 not just readable.
 
+## Last session: 2026-09-23 (cont'd)
+Completed task: 1.10 GitHub release tagged v1.0.0
+
+- Tagged the current `main` (annotated tag `v1.0.0`) and published a
+  [GitHub Release](https://github.com/jnoscodes/hoopanalytics/releases/tag/v1.0.0)
+  from it, closing out the V1 milestone.
+- Release notes summarize the feature set and, per an explicit request
+  to make the "notable engineering" section both technically precise
+  and legible to a non-engineer reviewer, each notable bug/investigation
+  is written as issue -> diagnosis -> fix -> why it matters: the VPN
+  root-cause correction (1.2), the cloud-IP-blocking diagnosis and
+  pre-seeding fix (1.9), and the SQLite cross-thread concurrency bug
+  (1.6).
+- This completion log itself is a separate commit from the tag/release,
+  not part of the tagged snapshot — project-tracking metadata isn't
+  part of the product being released.
+
+## V1 milestone complete
+
+All of 1.1-1.10 are done: fetch -> clean -> database pipeline, two
+Streamlit pages, a live pre-seeded deployment, a getting-started
+tutorial, and a tagged v1.0.0 release. Next up per ROADMAP.md is V2
+(machine learning: feature engineering, a similarity model, a
+performance prediction model) -- a substantially different kind of
+work from V1's data engineering, worth starting as its own session
+rather than folding into this one.
+
 ## Next task
-1.10 GitHub release tagged v1.0.0
+2.1 Feature engineering for the similarity model (V2 start)
