@@ -3,7 +3,7 @@
 import plotly.express as px
 import streamlit as st
 
-from src.pipeline import get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
+from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
 
 st.set_page_config(page_title="HoopAnalytics", page_icon="🏀")
 
@@ -28,7 +28,7 @@ if player_name:
         cols = st.columns(4)
         cols[0].metric("Team", bio["TEAM_NAME"])
         cols[1].metric("Position", bio["POSITION"])
-        cols[2].metric("Height", f'{bio["HEIGHT"]} in')
+        cols[2].metric("Height", format_height(bio["HEIGHT"]))
         cols[3].metric("Weight", f'{bio["WEIGHT"]} lb')
 
         cols = st.columns(4)
