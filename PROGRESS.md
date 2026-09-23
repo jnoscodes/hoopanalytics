@@ -532,5 +532,105 @@ performance prediction model) -- a substantially different kind of
 work from V1's data engineering, worth starting as its own session
 rather than folding into this one.
 
+## Bug fix — 2026-09-24: career trend charts silently dropping seasons
+
+User-reported while exploring the app locally: the "points per game over
+career" line chart (both the profile page and the comparison page's
+calendar-season mode) stopped partway through a player's career, and for
+Michael Jordan looked compressed/wrong rather than just short.
+
+**Root cause:** Plotly auto-detects a trace's x-axis type from the data.
+`SEASON_ID` strings like `"2001-02"` happen to match a valid `YYYY-MM`
+date pattern (February 2001), so Plotly inferred a **date** axis. Season
+strings whose second half isn't a valid month (`"1984-85"`, `"2012-13"`,
+etc.) silently fail to parse as dates and vanish from the chart -- only
+seasons shaped like `"20XX-01"` through `"20XX-12"` survived. This
+explains both symptoms with one cause: LeBron's chart "stopping at 2012"
+(his last valid-month-shaped season was 2011-12) and Jordan's looking
+compressed (most of his 15 seasons got dropped, leaving only the handful
+that happened to parse).
+
+This also corrects an earlier mistake: during 1.6/1.7 testing, a similar
+"chart looks cut off" observation was checked via JS (confirming the
+trace's raw x-array had the full season range) and concluded to be a
+screenshot-cropping illusion. That check only confirmed the data was
+present, not how Plotly was *typing* the axis -- it was actually this
+same bug, just not caught at the time because the verification wasn't
+deep enough.
+
+**Fix:** `fig.update_xaxes(type="category")` on every chart that plots
+`SEASON_ID` (`app.py`, `pages/1_Player_Comparison.py`) -- season labels
+are categorical/ordinal, never meant to be parsed as dates. Verified via
+the actual Plotly figure object (not screenshots) that both LeBron's and
+Jordan's charts now render the full season range, including career gaps
+(e.g. Jordan's 1994/1998-2001 retirements) as honestly-omitted
+categories rather than a fake interpolated line across them.
+
+## Noted for later: UI/UX needs real design attention
+
+Flagged directly: the app currently uses Streamlit's default component
+styling throughout and looks plain. This is intentional for now -- V1-V2
+priority is function and learning the underlying mechanics, not visual
+design -- but a real UI/UX pass (custom styling, layout, visual
+identity, possibly moving beyond default Streamlit widgets) is wanted as
+a dedicated future effort, not a footnote squeezed into a feature task.
+Not scheduled yet; revisit once V2 (or whichever version) is far enough
+along that it's worth the investment.
+
+## Feature — 2026-09-24: typo-tolerant player search with live suggestions
+
+User-requested while exploring the app: the plain text input had no
+suggestions and no typo tolerance (a search for "michael" with any
+misspelling just failed outright, or silently returned whichever player
+`find_players_by_full_name` fuzzy-matched, invisibly).
+
+Replaced `st.text_input` with `st_searchbox` (new dependency,
+`streamlit-searchbox`) on both pages -- a real dropdown-as-you-type
+component, not Streamlit's native `st.selectbox` (whose filtering
+happens client-side and can't run custom Python typo-tolerance logic).
+
+**Search design -- two-tier, not pure fuzzy matching:**
+1. Substring match first (fast, case-insensitive, ranks `startswith`
+   results first). Handles the overwhelmingly common case: typing a
+   correct partial name.
+2. Fuzzy match (`difflib.SequenceMatcher`, against both the full name
+   and each name token) only when no substring match exists at all.
+   Catches actual typos.
+
+This order matters and was arrived at empirically, not assumed: pure
+fuzzy matching (`difflib.get_close_matches`) was tried first and
+**failed on the most common case** -- short correct prefixes like "leb"
+or "jok" scored too low against full names ("LeBron James", "Nikola
+Jokić") to surface at all, since `SequenceMatcher`'s ratio penalizes
+large length differences between a 3-character query and a full name.
+Substring-first fixes this while still catching genuine typos like
+"micheal jordn" -> Michael Jordan or "giannis antetokunmpo" -> Giannis
+Antetokounmpo (correctly ranked above his brothers) via the fallback
+tier. Benchmarked against all ~5,100 players (active + historical, not
+just the 530 seeded ones, since the app can already look up anyone):
+substring hits are sub-millisecond; the fuzzy fallback (only reached on
+a real typo) takes ~100-230ms, still well within a usable search-as-
+you-type feel.
+
+`search_players()` returns `(display_name, person_id)` pairs, so a
+selection resolves directly to an ID -- `get_or_build_player()` was
+changed to take `person_id` instead of `name`, removing the
+name -> ID lookup (and the `ValueError`/`st.error` path for "no player
+found") entirely, since a selection can now only ever be a valid player.
+
+Also refreshed `docs/images/profile.png` and `comparison.png` (the new
+search UI looks different) -- same headless-Chrome + Pillow-composite
+process as task 1.8, and a nice side confirmation that the season-axis
+chart fix above actually shows the full career range in a real capture,
+not just a live-tested one.
+
+## Bug fix — 2026-09-24: shooting percentages shown as raw decimals
+
+User-reported while testing the new search feature: FG%/3P%/FT% showed
+as "0.515" instead of "51.5%" (the underlying `FG_PCT` etc. columns are
+genuinely 0-1 floats, just never formatted for display). Fixed with
+`st.column_config.NumberColumn(format="percent")` on the season table
+and manual `*100` formatting on the comparison page's metric tiles.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)

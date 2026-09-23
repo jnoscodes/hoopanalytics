@@ -16,6 +16,9 @@ a notebook analysis.
   a head-to-head bar chart plus a full-career trend chart overlaying both
   players — switchable between real calendar seasons and "season # in
   career," so trajectories stay comparable even across different eras.
+- Typo-tolerant search with live suggestions as you type (e.g. "micheal
+  jordn" still finds Michael Jordan), across every NBA player ever, not
+  just the pre-seeded ones.
 - Player headshots on both pages.
 - First search for a player fetches live and caches the result; every
   later search for that player is a fast local read.
