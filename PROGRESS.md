@@ -532,5 +532,50 @@ performance prediction model) -- a substantially different kind of
 work from V1's data engineering, worth starting as its own session
 rather than folding into this one.
 
+## Bug fix — 2026-09-24: career trend charts silently dropping seasons
+
+User-reported while exploring the app locally: the "points per game over
+career" line chart (both the profile page and the comparison page's
+calendar-season mode) stopped partway through a player's career, and for
+Michael Jordan looked compressed/wrong rather than just short.
+
+**Root cause:** Plotly auto-detects a trace's x-axis type from the data.
+`SEASON_ID` strings like `"2001-02"` happen to match a valid `YYYY-MM`
+date pattern (February 2001), so Plotly inferred a **date** axis. Season
+strings whose second half isn't a valid month (`"1984-85"`, `"2012-13"`,
+etc.) silently fail to parse as dates and vanish from the chart -- only
+seasons shaped like `"20XX-01"` through `"20XX-12"` survived. This
+explains both symptoms with one cause: LeBron's chart "stopping at 2012"
+(his last valid-month-shaped season was 2011-12) and Jordan's looking
+compressed (most of his 15 seasons got dropped, leaving only the handful
+that happened to parse).
+
+This also corrects an earlier mistake: during 1.6/1.7 testing, a similar
+"chart looks cut off" observation was checked via JS (confirming the
+trace's raw x-array had the full season range) and concluded to be a
+screenshot-cropping illusion. That check only confirmed the data was
+present, not how Plotly was *typing* the axis -- it was actually this
+same bug, just not caught at the time because the verification wasn't
+deep enough.
+
+**Fix:** `fig.update_xaxes(type="category")` on every chart that plots
+`SEASON_ID` (`app.py`, `pages/1_Player_Comparison.py`) -- season labels
+are categorical/ordinal, never meant to be parsed as dates. Verified via
+the actual Plotly figure object (not screenshots) that both LeBron's and
+Jordan's charts now render the full season range, including career gaps
+(e.g. Jordan's 1994/1998-2001 retirements) as honestly-omitted
+categories rather than a fake interpolated line across them.
+
+## Noted for later: UI/UX needs real design attention
+
+Flagged directly: the app currently uses Streamlit's default component
+styling throughout and looks plain. This is intentional for now -- V1-V2
+priority is function and learning the underlying mechanics, not visual
+design -- but a real UI/UX pass (custom styling, layout, visual
+identity, possibly moving beyond default Streamlit widgets) is wanted as
+a dedicated future effort, not a footnote squeezed into a feature task.
+Not scheduled yet; revisit once V2 (or whichever version) is far enough
+along that it's worth the investment.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)

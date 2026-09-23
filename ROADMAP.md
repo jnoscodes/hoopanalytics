@@ -34,5 +34,13 @@
 - [ ] 4.2 Cloud deployment
 - [ ] 4.3 RAG assistant ("Ask HoopAnalytics")
 
+## Noted, not yet scheduled
+- **UI/UX pass** — the app currently uses default Streamlit styling
+  throughout. A real design pass (visual identity, layout, possibly
+  custom components) is wanted, but deliberately deferred: current
+  priority is function and learning the underlying mechanics. Revisit
+  once a later version is far enough along to be worth the investment;
+  not assigned a version number yet. See PROGRESS.md, 2026-09-24.
+
 ## Current status
 → See PROGRESS.md for the exact current task.
