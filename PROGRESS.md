@@ -577,5 +577,60 @@ a dedicated future effort, not a footnote squeezed into a feature task.
 Not scheduled yet; revisit once V2 (or whichever version) is far enough
 along that it's worth the investment.
 
+## Feature — 2026-09-24: typo-tolerant player search with live suggestions
+
+User-requested while exploring the app: the plain text input had no
+suggestions and no typo tolerance (a search for "michael" with any
+misspelling just failed outright, or silently returned whichever player
+`find_players_by_full_name` fuzzy-matched, invisibly).
+
+Replaced `st.text_input` with `st_searchbox` (new dependency,
+`streamlit-searchbox`) on both pages -- a real dropdown-as-you-type
+component, not Streamlit's native `st.selectbox` (whose filtering
+happens client-side and can't run custom Python typo-tolerance logic).
+
+**Search design -- two-tier, not pure fuzzy matching:**
+1. Substring match first (fast, case-insensitive, ranks `startswith`
+   results first). Handles the overwhelmingly common case: typing a
+   correct partial name.
+2. Fuzzy match (`difflib.SequenceMatcher`, against both the full name
+   and each name token) only when no substring match exists at all.
+   Catches actual typos.
+
+This order matters and was arrived at empirically, not assumed: pure
+fuzzy matching (`difflib.get_close_matches`) was tried first and
+**failed on the most common case** -- short correct prefixes like "leb"
+or "jok" scored too low against full names ("LeBron James", "Nikola
+Jokić") to surface at all, since `SequenceMatcher`'s ratio penalizes
+large length differences between a 3-character query and a full name.
+Substring-first fixes this while still catching genuine typos like
+"micheal jordn" -> Michael Jordan or "giannis antetokunmpo" -> Giannis
+Antetokounmpo (correctly ranked above his brothers) via the fallback
+tier. Benchmarked against all ~5,100 players (active + historical, not
+just the 530 seeded ones, since the app can already look up anyone):
+substring hits are sub-millisecond; the fuzzy fallback (only reached on
+a real typo) takes ~100-230ms, still well within a usable search-as-
+you-type feel.
+
+`search_players()` returns `(display_name, person_id)` pairs, so a
+selection resolves directly to an ID -- `get_or_build_player()` was
+changed to take `person_id` instead of `name`, removing the
+name -> ID lookup (and the `ValueError`/`st.error` path for "no player
+found") entirely, since a selection can now only ever be a valid player.
+
+Also refreshed `docs/images/profile.png` and `comparison.png` (the new
+search UI looks different) -- same headless-Chrome + Pillow-composite
+process as task 1.8, and a nice side confirmation that the season-axis
+chart fix above actually shows the full career range in a real capture,
+not just a live-tested one.
+
+## Bug fix — 2026-09-24: shooting percentages shown as raw decimals
+
+User-reported while testing the new search feature: FG%/3P%/FT% showed
+as "0.515" instead of "51.5%" (the underlying `FG_PCT` etc. columns are
+genuinely 0-1 floats, just never formatted for display). Fixed with
+`st.column_config.NumberColumn(format="percent")` on the season table
+and manual `*100` formatting on the comparison page's metric tiles.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
