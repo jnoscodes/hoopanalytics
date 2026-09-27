@@ -20,6 +20,12 @@ HEADSHOT_URL = "https://cdn.nba.com/headshots/nba/latest/1040x760/{person_id}.pn
 # Loaded once at import time: nba_api's static list is offline/bundled data,
 # not a network call, so this is cheap and safe to hold in memory.
 _ALL_PLAYERS = static_players.get_players()
+_PLAYER_NAMES = {p["id"]: p["full_name"] for p in _ALL_PLAYERS}
+
+
+def get_player_name(person_id: int) -> str:
+    """Offline id -> full name lookup (no DB or network needed)."""
+    return _PLAYER_NAMES.get(person_id, f"Player #{person_id}")
 
 
 def search_players(term: str, limit: int = 8) -> list[tuple[str, int]]:
@@ -61,6 +67,12 @@ def search_players(term: str, limit: int = 8) -> list[tuple[str, int]]:
 @st.cache_resource
 def get_connection() -> sqlite3.Connection:
     return init_db()
+
+
+def has_player(conn: sqlite3.Connection, person_id: int) -> bool:
+    """True if the player is already in the local DB (no live fetch needed)."""
+    row = conn.execute("SELECT 1 FROM players WHERE PERSON_ID = ?", (person_id,)).fetchone()
+    return row is not None
 
 
 @st.cache_data(show_spinner="Loading player data...")

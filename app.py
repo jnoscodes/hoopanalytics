@@ -2,9 +2,9 @@
 
 import plotly.express as px
 import streamlit as st
-from streamlit_searchbox import st_searchbox
 
-from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, search_players, with_per_game_averages
+from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
+from src.ui import player_search
 
 LEBRON_JAMES_ID = 2544
 
@@ -14,14 +14,7 @@ st.title("🏀 HoopAnalytics")
 st.caption("Player profile — search any NBA player by name.")
 
 conn = get_connection()
-person_id = st_searchbox(
-    search_players,
-    label="Player name",
-    placeholder="Search for a player...",
-    default=LEBRON_JAMES_ID,
-    default_searchterm="LeBron James",
-    key="profile_search",
-)
+person_id = player_search(conn, key="profile_search", label="Player name", default_id=LEBRON_JAMES_ID)
 
 if person_id:
     bio_df, stats_df = get_or_build_player(conn, person_id)
