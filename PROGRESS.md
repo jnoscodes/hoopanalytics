@@ -632,5 +632,74 @@ genuinely 0-1 floats, just never formatted for display). Fixed with
 `st.column_config.NumberColumn(format="percent")` on the season table
 and manual `*100` formatting on the comparison page's metric tiles.
 
+## Debug pass — 2026-09-27: V1 user-testing feedback
+
+User tested the live demo and reported 9 issues. Handled as one branch
+(`fix/v1-feedback`), one commit per fix -- a single branch rather than one
+PR per group, because the "never stack a branch on an unmerged PR" rule
+would otherwise have blocked every fix on the previous PR's merge.
+
+Diagnosed before fixing, in the browser, against the live app:
+
+- **Search box flicker / "clear it all and retype and it breaks"** (the
+  user's own theory was right). Root cause, confirmed by watching the DOM:
+  a Backspace on an *already empty* box fires react-select's "clear"
+  action; `streamlit-searchbox` handles that by regenerating its React key,
+  i.e. destroying and re-creating its iframe (height 0 -> 71px over ~1.2s,
+  the "disappears then reappears"), resetting to the default player and
+  dropping keyboard focus, so the next keystrokes went nowhere. Fixed by
+  making the box non-clearable. Separately, every keystroke re-ran the
+  whole page; the box now lives in an `st.fragment` with
+  `rerun_scope="fragment"`, so typing reruns only the box and the page
+  reruns once, after a pick has loaded. Could not reproduce flicker with no
+  interaction at all (checked 20s idle on desktop and mobile viewports).
+- **"Michael Jordan doesn't show up"** was not a data issue:
+  `search_players("michael jordan")` returns him correctly. It was the
+  lost-keystroke bug above.
+- **Picking a retired player crashed the live demo** (e.g. Don Ohl): only
+  the 530 active players are pre-seeded, and a live fetch from the cloud
+  host is blocked (see 1.9), so it timed out (~30s) then raised. User chose
+  to keep every player searchable and show a short, non-blocking popup on
+  failure. Implemented as an `st.toast` (~4s) raised from inside the
+  fragment: the current player stays on screen, no page reload. Added a
+  5-minute "circuit breaker" (process-wide via `st.cache_resource`): after
+  one failed fetch, later picks of uncached players fail instantly instead
+  of each waiting out the timeout again. Verified with a local server
+  forced offline through a dead proxy (not committed).
+- **Comparison chart broken when player B's career started first** (e.g.
+  McCain vs LeBron): side effect of the categorical-axis fix from
+  2026-09-24 -- Plotly orders categories by first appearance, so A's
+  seasons came first. Fixed with an explicit sorted `category_orders`.
+- **Unlimited zoom/pan on charts**: user chose "bounded zoom" over
+  "disable zoom". Clamped with Plotly `minallowed`/`maxallowed` on both
+  axes; zoom-in still works. Minor Plotly quirk: panning hard against an
+  edge narrows the view slightly; double-click resets it.
+- **Height in inches** -> `6'9"` (display only; stored as inches, see
+  methodology). Note: 81 in is 6'9", the NBA's listed height for LeBron.
+- **Draft text cut off with "..."**: measured, not guessed -- metric tiles
+  are 159px wide at a 36px font, so "2003 R1 #1" (160px) but also
+  "Timberwolves" (213px), "Guard-Forward" (229px) and long country names
+  were all truncated. Team/position/country moved to a wrapping caption
+  under the name, draft on its own line ("Drafted 2003 · Round 1, pick 1"
+  or "Undrafted"); tiles kept for short numeric values only.
+- **Raw column names** (`SEASON_ID`, ...) -> Season, Team, Games, FG%...
+  via `column_config` labels only.
+- **Slow first load**: measured on the live app -- first visit ~10s to the
+  chart, reload ~3s; not our code. The rest is Streamlit Cloud waking a
+  sleeping app. Documented in the README, not "fixed".
+
+Also found while checking a previous claim: **traded players' seasons were
+duplicated** on a live fetch (one row per team + a TOT row; 189 of 531
+cached players). Fixed in `clean.py` -- see `docs/methodology.md`.
+
+## Decisions made (debug pass)
+- Kept `streamlit-searchbox` (configured) over switching to native
+  `st.selectbox`: the native widget would fix the flicker too, but loses
+  the typo-tolerant server-side search and still has a dropdown arrow.
+- Shared UI code (search widget, chart bounds) extracted into a new
+  `src/ui.py` rather than `pipeline.py`, which is about data access.
+- README screenshots are now outdated (they show the dropdown arrow,
+  "81 in" and raw column names) -- refreshing them is a follow-up.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)

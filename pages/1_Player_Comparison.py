@@ -3,9 +3,9 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from streamlit_searchbox import st_searchbox
 
-from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, search_players, with_per_game_averages
+from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
+from src.ui import bound_to_data, player_search
 
 LEBRON_JAMES_ID = 2544
 LAMELO_BALL_ID = 1630163
@@ -18,17 +18,10 @@ st.caption("Compare two players, each on their own selected season.")
 conn = get_connection()
 
 
-def render_player_column(column, label: str, default_id: int, default_name: str, key_prefix: str):
+def render_player_column(column, label: str, default_id: int, key_prefix: str):
     """Render one player's inputs/bio/season picker; return (display_name, season_row, full_stats) or None."""
     with column:
-        person_id = st_searchbox(
-            search_players,
-            label=f"Player {label}",
-            placeholder="Search for a player...",
-            default=default_id,
-            default_searchterm=default_name,
-            key=f"{key_prefix}_search",
-        )
+        person_id = player_search(conn, key=f"{key_prefix}_search", label=f"Player {label}", default_id=default_id)
         if not person_id:
             return None
 
@@ -60,8 +53,8 @@ def render_player_column(column, label: str, default_id: int, default_name: str,
 
 
 col_a, col_b = st.columns(2)
-result_a = render_player_column(col_a, "A", LEBRON_JAMES_ID, "LeBron James", "a")
-result_b = render_player_column(col_b, "B", LAMELO_BALL_ID, "LaMelo Ball", "b")
+result_a = render_player_column(col_a, "A", LEBRON_JAMES_ID, "a")
+result_b = render_player_column(col_b, "B", LAMELO_BALL_ID, "b")
 
 if result_a and result_b:
     name_a, season_a, stats_a = result_a
@@ -78,6 +71,7 @@ if result_a and result_b:
     ).melt(id_vars="Player", var_name="Stat", value_name="Per game")
 
     bar_fig = px.bar(comparison_df, x="Stat", y="Per game", color="Player", barmode="group")
+    bound_to_data(bar_fig, n_categories=3, y_max=comparison_df["Per game"].max())
     st.plotly_chart(bar_fig, width="stretch")
 
     st.subheader("Career trend: points per game")
@@ -92,10 +86,17 @@ if result_a and result_b:
     x_col = "SEASON_ID" if x_mode == "Calendar season" else "SEASON_NUM"
     x_title = "Season" if x_mode == "Calendar season" else "Season # in career"
 
-    line_fig = px.line(combined, x=x_col, y="PPG", color="Player", markers=True)
+    # Plotly orders categories by first appearance in the data: if player A's
+    # career starts later than B's, A's seasons would come first on the axis
+    # and B's line would jump backwards. Sort the categories explicitly.
+    x_order = sorted(combined[x_col].unique())
+    line_fig = px.line(
+        combined, x=x_col, y="PPG", color="Player", markers=True, category_orders={x_col: x_order}
+    )
     # Force categorical: Plotly auto-detects "2001-02"-style SEASON_ID
     # strings as dates, silently dropping any season whose second half
     # isn't 01-12.
     line_fig.update_xaxes(type="category")
+    bound_to_data(line_fig, n_categories=len(x_order), y_max=combined["PPG"].max())
     line_fig.update_layout(xaxis_title=x_title, yaxis_title="Points per game")
     st.plotly_chart(line_fig, width="stretch")

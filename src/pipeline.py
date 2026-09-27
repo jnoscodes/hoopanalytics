@@ -20,6 +20,12 @@ HEADSHOT_URL = "https://cdn.nba.com/headshots/nba/latest/1040x760/{person_id}.pn
 # Loaded once at import time: nba_api's static list is offline/bundled data,
 # not a network call, so this is cheap and safe to hold in memory.
 _ALL_PLAYERS = static_players.get_players()
+_PLAYER_NAMES = {p["id"]: p["full_name"] for p in _ALL_PLAYERS}
+
+
+def get_player_name(person_id: int) -> str:
+    """Offline id -> full name lookup (no DB or network needed)."""
+    return _PLAYER_NAMES.get(person_id, f"Player #{person_id}")
 
 
 def search_players(term: str, limit: int = 8) -> list[tuple[str, int]]:
@@ -63,6 +69,12 @@ def get_connection() -> sqlite3.Connection:
     return init_db()
 
 
+def has_player(conn: sqlite3.Connection, person_id: int) -> bool:
+    """True if the player is already in the local DB (no live fetch needed)."""
+    row = conn.execute("SELECT 1 FROM players WHERE PERSON_ID = ?", (person_id,)).fetchone()
+    return row is not None
+
+
 @st.cache_data(show_spinner="Loading player data...")
 def get_or_build_player(_conn: sqlite3.Connection, person_id: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return (bio_df, stats_df) for a player, reading from the DB if cached there,
@@ -98,7 +110,16 @@ def format_height(height_inches) -> str:
     """Format a HEIGHT value for display; some players have no height on record."""
     if height_inches is None or pd.isna(height_inches):
         return "Unknown"
-    return f"{int(height_inches)} in"
+    feet, inches = divmod(int(height_inches), 12)
+    return f"{feet}'{inches}\""
+
+
+def format_draft(bio: pd.Series) -> str:
+    """Format draft info; undrafted players have the literal "Undrafted" in all
+    three DRAFT_* fields, and DRAFT_NUMBER is the overall pick number."""
+    if bio["DRAFT_YEAR"] == "Undrafted":
+        return "Undrafted"
+    return f'Drafted {bio["DRAFT_YEAR"]} · Round {bio["DRAFT_ROUND"]}, pick {bio["DRAFT_NUMBER"]}'
 
 
 def get_headshot_url(person_id: int) -> str:
