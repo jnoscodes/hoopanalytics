@@ -81,9 +81,20 @@ def clean_player_bio(raw_json: dict) -> pd.DataFrame:
 
 
 def clean_career_stats(raw_json: dict) -> pd.DataFrame:
-    """Tidy PlayerCareerStats' regular-season totals into a per-season DataFrame."""
+    """Tidy PlayerCareerStats' regular-season totals into one row per season.
+
+    A player traded mid-season gets one row per team plus a "TOT" (total)
+    row for that season. Only the TOT row is kept for those seasons, so the
+    output matches the (PLAYER_ID, SEASON_ID) primary key in database.py --
+    before this, the DB kept TOT only because it happened to be inserted
+    last, while a freshly fetched player showed every per-team row too.
+    """
     df = _result_set_to_df(raw_json, "SeasonTotalsRegularSeason")
-    return df[CAREER_STATS_COLUMNS].copy()
+    df = df[CAREER_STATS_COLUMNS].copy()
+
+    traded_seasons = df.loc[df["TEAM_ABBREVIATION"] == "TOT", "SEASON_ID"]
+    per_team_rows = df["SEASON_ID"].isin(traded_seasons) & (df["TEAM_ABBREVIATION"] != "TOT")
+    return df[~per_team_rows].reset_index(drop=True)
 
 
 if __name__ == "__main__":
