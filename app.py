@@ -4,7 +4,7 @@ import plotly.express as px
 import streamlit as st
 
 from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
-from src.ui import player_search
+from src.ui import bound_to_data, player_search
 
 LEBRON_JAMES_ID = 2544
 
@@ -56,5 +56,6 @@ if person_id:
     # Force categorical: Plotly auto-detects "2001-02"-style strings as
     # dates, silently dropping any season whose second half isn't 01-12.
     fig.update_xaxes(type="category")
+    bound_to_data(fig, n_categories=len(display_stats), y_max=display_stats["PPG"].max())
     fig.update_layout(xaxis_title="Season", yaxis_title="Points per game")
     st.plotly_chart(fig, width="stretch")

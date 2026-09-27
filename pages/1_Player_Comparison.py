@@ -5,7 +5,7 @@ import plotly.express as px
 import streamlit as st
 
 from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
-from src.ui import player_search
+from src.ui import bound_to_data, player_search
 
 LEBRON_JAMES_ID = 2544
 LAMELO_BALL_ID = 1630163
@@ -71,6 +71,7 @@ if result_a and result_b:
     ).melt(id_vars="Player", var_name="Stat", value_name="Per game")
 
     bar_fig = px.bar(comparison_df, x="Stat", y="Per game", color="Player", barmode="group")
+    bound_to_data(bar_fig, n_categories=3, y_max=comparison_df["Per game"].max())
     st.plotly_chart(bar_fig, width="stretch")
 
     st.subheader("Career trend: points per game")
@@ -96,5 +97,6 @@ if result_a and result_b:
     # strings as dates, silently dropping any season whose second half
     # isn't 01-12.
     line_fig.update_xaxes(type="category")
+    bound_to_data(line_fig, n_categories=len(x_order), y_max=combined["PPG"].max())
     line_fig.update_layout(xaxis_title=x_title, yaxis_title="Points per game")
     st.plotly_chart(line_fig, width="stretch")

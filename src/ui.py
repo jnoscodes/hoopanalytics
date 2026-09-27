@@ -4,6 +4,7 @@ import logging
 import sqlite3
 import time
 
+import plotly.graph_objects as go
 import streamlit as st
 from streamlit_searchbox import st_searchbox
 
@@ -102,3 +103,16 @@ def _try_load_player(conn: sqlite3.Connection, person_id: int) -> bool:
         logger.exception("Live fetch failed for player %s", person_id)
         status["down_until"] = time.time() + LIVE_API_COOLDOWN_SECONDS
         return False
+
+
+def bound_to_data(fig: go.Figure, n_categories: int, y_max: float) -> None:
+    """Limit zoom/pan to the data: no zooming out past it or dragging it off-screen.
+
+    The x-axis is categorical (seasons), so its range is in category-index
+    units: category i sits at x=i, hence the -0.5 / n-0.5 half-slot margins.
+    minallowed/maxallowed clamp both zoom-out and pan; zooming *in* stays free.
+    """
+    x_range = [-0.5, n_categories - 0.5]
+    y_range = [0, y_max * 1.1]
+    fig.update_xaxes(range=x_range, minallowed=x_range[0], maxallowed=x_range[1])
+    fig.update_yaxes(range=y_range, minallowed=y_range[0], maxallowed=y_range[1])
