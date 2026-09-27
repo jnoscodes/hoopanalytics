@@ -114,6 +114,14 @@ def format_height(height_inches) -> str:
     return f"{feet}'{inches}\""
 
 
+def format_draft(bio: pd.Series) -> str:
+    """Format draft info; undrafted players have the literal "Undrafted" in all
+    three DRAFT_* fields, and DRAFT_NUMBER is the overall pick number."""
+    if bio["DRAFT_YEAR"] == "Undrafted":
+        return "Undrafted"
+    return f'Drafted {bio["DRAFT_YEAR"]} · Round {bio["DRAFT_ROUND"]}, pick {bio["DRAFT_NUMBER"]}'
+
+
 def get_headshot_url(person_id: int) -> str:
     """Build the NBA CDN headshot URL for a player.
 

@@ -3,7 +3,7 @@
 import plotly.express as px
 import streamlit as st
 
-from src.pipeline import format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
+from src.pipeline import format_draft, format_height, get_connection, get_headshot_url, get_or_build_player, with_per_game_averages
 from src.ui import bound_to_data, player_search
 
 LEBRON_JAMES_ID = 2544
@@ -23,17 +23,18 @@ if person_id:
     photo_col, header_col = st.columns([1, 3])
     photo_col.image(get_headshot_url(bio["PERSON_ID"]), width=150)
     header_col.header(bio["DISPLAY_FIRST_LAST"])
+    # Free-text fields go in a wrapping caption, not st.metric tiles: metric
+    # values are 36px and cut off with "..." past ~160px (4-column layout),
+    # which "Timberwolves", "Guard-Forward" or a full draft line all exceed.
+    # Blank fields (e.g. no current team) are skipped rather than shown empty.
+    details = [bio["TEAM_NAME"], bio["POSITION"], bio["COUNTRY"]]
+    header_col.caption(" · ".join(d for d in details if d))
+    header_col.caption(format_draft(bio))
 
     cols = st.columns(4)
-    cols[0].metric("Team", bio["TEAM_NAME"])
-    cols[1].metric("Position", bio["POSITION"])
-    cols[2].metric("Height", format_height(bio["HEIGHT"]))
-    cols[3].metric("Weight", f'{bio["WEIGHT"]} lb')
-
-    cols = st.columns(4)
-    cols[0].metric("Country", bio["COUNTRY"])
-    cols[1].metric("Experience", f'{bio["SEASON_EXP"]} yrs')
-    cols[2].metric("Draft", f'{bio["DRAFT_YEAR"]} R{bio["DRAFT_ROUND"]} #{bio["DRAFT_NUMBER"]}')
+    cols[0].metric("Height", format_height(bio["HEIGHT"]))
+    cols[1].metric("Weight", f'{bio["WEIGHT"]} lb')
+    cols[2].metric("Experience", f'{bio["SEASON_EXP"]} yrs')
     cols[3].metric("Jersey", f'#{bio["JERSEY"]}')
 
     display_stats = with_per_game_averages(stats_df)
