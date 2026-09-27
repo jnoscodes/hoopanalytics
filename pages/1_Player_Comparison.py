@@ -85,7 +85,13 @@ if result_a and result_b:
     x_col = "SEASON_ID" if x_mode == "Calendar season" else "SEASON_NUM"
     x_title = "Season" if x_mode == "Calendar season" else "Season # in career"
 
-    line_fig = px.line(combined, x=x_col, y="PPG", color="Player", markers=True)
+    # Plotly orders categories by first appearance in the data: if player A's
+    # career starts later than B's, A's seasons would come first on the axis
+    # and B's line would jump backwards. Sort the categories explicitly.
+    x_order = sorted(combined[x_col].unique())
+    line_fig = px.line(
+        combined, x=x_col, y="PPG", color="Player", markers=True, category_orders={x_col: x_order}
+    )
     # Force categorical: Plotly auto-detects "2001-02"-style SEASON_ID
     # strings as dates, silently dropping any season whose second half
     # isn't 01-12.
