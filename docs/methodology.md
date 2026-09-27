@@ -60,3 +60,28 @@ not a deliberate scope choice). "Currently active" is self-updating in
 spirit (re-running `src/seed.py` each season naturally tracks the current
 roster) and matches who a visitor is actually likely to search for, with
 full, untruncated career stats for everyone included.
+
+## Bug fix (2026-09-27) — traded seasons: one "TOT" row per player-season
+
+`PlayerCareerStats` returns, for a player traded mid-season, one row per
+team **plus** a `TOT` (total) row for that season. `clean_career_stats()`
+now keeps only the `TOT` row for those seasons, so the cleaned data has
+exactly one row per `(PLAYER_ID, SEASON_ID)` -- the table's primary key.
+
+- Before this, the database happened to end up with the `TOT` row anyway
+  (it is always the last row returned, so `INSERT OR REPLACE` kept it), but
+  a freshly fetched player was displayed straight from `clean.py` with every
+  per-team row too: 189 of 531 cached players had duplicate seasons.
+  Checked against the full cache before relying on it: every multi-row
+  season has exactly one `TOT` row.
+- Why `TOT` rather than the per-team rows: the season-level question
+  ("how many points per game did he score in 2025-26?") is answered by the
+  whole season, not one stint. This matters again for V2 (2.1): per-game
+  rate features must be computed on season totals, or a traded player's
+  season would be split into several small-sample rows.
+- Trade-off: the per-team split is discarded, so team-level analysis
+  (e.g. "performance per team") isn't possible from this table. Not needed
+  by any current or planned V1/V2 feature.
+- Related display-only change: `HEIGHT` stays stored in total inches (a
+  number, the useful form for any future modeling) and is formatted as
+  feet-inches (`6'9"`) only at display time.

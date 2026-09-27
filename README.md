@@ -87,6 +87,14 @@ Search any NBA player by name on the **Player Profile** page, or switch to
   `PROGRESS.md`. Running the app locally (no cloud-IP restriction) always
   works for any player — see
   [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
+  When a player can't be fetched, the app shows a short notice and keeps
+  the current player on screen instead of crashing; after one failure,
+  live fetches are paused for 5 minutes so later picks fail instantly.
+- **The live demo can be slow to open.** Streamlit Community Cloud puts
+  apps to sleep after a period without visitors; the first visit after
+  that has to wake the app up, which can take up to a minute or so.
+  Once awake, a first visit takes ~10s (the browser downloads Streamlit's
+  and Plotly's JavaScript once) and a reload ~3s.
 - Player headshots are loaded from an unofficial NBA CDN URL pattern (not
   part of `nba_api`'s documented endpoints). If NBA changes that URL
   scheme, only the photos would break, not the stats.
@@ -103,6 +111,7 @@ src/
   clean.py       # raw JSON -> typed DataFrames
   database.py    # SQLite schema + insertion
   pipeline.py    # Streamlit-facing DB-first lookup, shared by all pages
+  ui.py          # shared UI pieces: player search box, chart zoom limits
   seed.py        # builds the committed seed database (active players)
 data/
   raw/           # cached raw API responses (gitignored)
