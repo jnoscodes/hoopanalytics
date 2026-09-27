@@ -110,7 +110,8 @@ def format_height(height_inches) -> str:
     """Format a HEIGHT value for display; some players have no height on record."""
     if height_inches is None or pd.isna(height_inches):
         return "Unknown"
-    return f"{int(height_inches)} in"
+    feet, inches = divmod(int(height_inches), 12)
+    return f"{feet}'{inches}\""
 
 
 def get_headshot_url(person_id: int) -> str:
