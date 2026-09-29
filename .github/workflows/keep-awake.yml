@@ -1,0 +1,42 @@
+# Keeps the live Streamlit Community Cloud demo from going to sleep
+# (apps sleep after 12h without traffic) by visiting it with a headless
+# browser on a schedule. See scripts/keep_awake.py for why a real browser
+# is needed rather than a plain HTTP ping.
+name: Keep live demo awake
+
+on:
+  schedule:
+    # Every 6 hours, well inside the 12h limit even if GitHub delays or
+    # skips a scheduled run. Minute 17 rather than :00, since the top of
+    # the hour is GitHub's busiest (and most delayed) slot.
+    - cron: "17 */6 * * *"
+  workflow_dispatch: # manual "Run workflow" button, for testing
+
+permissions:
+  contents: read
+
+jobs:
+  visit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright and Chromium
+        run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium
+
+      - name: Visit the live app
+        run: python scripts/keep_awake.py
+
+      - name: Upload screenshot if the app didn't load
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keep-awake-failure
+          path: keep_awake_failure.png
