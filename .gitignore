@@ -224,3 +224,6 @@ data/raw/*
 # SQLite database (regenerable via src/database.py, keep dir structure only)
 data/processed/*
 !data/processed/.gitkeep
+
+# Failure screenshot written by scripts/keep_awake.py
+keep_awake_failure.png

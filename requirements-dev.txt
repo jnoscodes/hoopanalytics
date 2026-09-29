@@ -1,3 +1,4 @@
 -r requirements.txt
 jupyter
 ipykernel
+playwright==1.63.0

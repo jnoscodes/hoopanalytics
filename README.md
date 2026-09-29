@@ -91,10 +91,13 @@ Search any NBA player by name on the **Player Profile** page, or switch to
   the current player on screen instead of crashing; after one failure,
   live fetches are paused for 5 minutes so later picks fail instantly.
 - **The live demo can be slow to open.** Streamlit Community Cloud puts
-  apps to sleep after a period without visitors; the first visit after
-  that has to wake the app up, which can take up to a minute or so.
-  Once awake, a first visit takes ~10s (the browser downloads Streamlit's
-  and Plotly's JavaScript once) and a reload ~3s.
+  apps to sleep after 12 hours without visitors, and the next visitor has
+  to wake it up (up to a minute or so). A scheduled GitHub Actions
+  workflow (`.github/workflows/keep-awake.yml`) visits the app every 6
+  hours with a headless browser to prevent this. Caveat: GitHub disables
+  scheduled workflows after 60 days without repository activity. Once
+  awake, a first visit takes ~10s (the browser downloads Streamlit's and
+  Plotly's JavaScript once) and a reload ~3s.
 - Player headshots are loaded from an unofficial NBA CDN URL pattern (not
   part of `nba_api`'s documented endpoints). If NBA changes that URL
   scheme, only the photos would break, not the stats.
@@ -118,6 +121,8 @@ data/
   processed/     # SQLite database (gitignored, bootstrapped from seed)
   seed/          # committed seed database (active players, see src/seed.py)
 notebooks/       # exploratory notebooks
+scripts/         # ops scripts (keep_awake.py: keeps the live demo awake)
+.github/         # GitHub Actions workflows (scheduled keep-awake visit)
 docs/            # methodology notes, README images, getting-started guide
 tests/           # automated tests (not yet populated)
 ```

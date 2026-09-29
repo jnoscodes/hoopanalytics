@@ -701,5 +701,50 @@ cached players). Fixed in `clean.py` -- see `docs/methodology.md`.
 - README screenshots are now outdated (they show the dropdown arrow,
   "81 in" and raw column names) -- refreshing them is a follow-up.
 
+## Ops — 2026-09-29: keep the live demo awake
+
+Follow-up to the debug pass's slow-load finding. Streamlit Community Cloud
+docs: "All apps without traffic for 12 hours go to sleep"; a sleeping app
+shows a "Yes, get this app back up!" button, and the next visitor waits for
+a restart. Confirmed live: the demo was asleep when checked after merging
+PR #15.
+
+Options compared (user-facing discussion): accept + document; a free
+uptime pinger (UptimeRobot etc. -- ruled out: a plain HTTP request likely
+doesn't count as traffic, the app only runs for a live browser session);
+another free host (Render/Hugging Face -- they sleep too); a Cloudflare
+Worker cron (same plain-request problem); a small paid VPS (fixes sleep
+*and* the cloud-IP block, but costs money -- deferred). Chosen: a
+scheduled GitHub Actions workflow.
+
+- `scripts/keep_awake.py`: headless Chromium via Playwright opens the app,
+  clicks the wake-up text if present (searched across all frames, by text,
+  since the sleep page's markup couldn't be inspected while the app was
+  awake), waits until the "HoopAnalytics" heading renders, stays 15s so the
+  visit registers as a session. Exits 1 if the app doesn't load within
+  5 minutes, saving a screenshot.
+- `.github/workflows/keep-awake.yml`: every 6h (`17 */6 * * *` -- half the
+  sleep window for margin against GitHub delaying/skipping scheduled runs,
+  and off the top of the hour, GitHub's busiest slot), plus a manual
+  trigger. A failed run makes GitHub email the owner, with the screenshot
+  uploaded as an artifact: a free "live demo is down" alert.
+- Verified locally, all three paths: live app already awake (loaded in
+  6s, exit 0); a local mock sleep page with the wake text inside an iframe
+  (clicked once, "woke" after 5s, exit 0); a page that never loads (exit 1,
+  screenshot written). Not verifiable before merge: GitHub only lists a
+  workflow once it's on the default branch, so the first CI run is a manual
+  trigger right after merging.
+
+## Decisions made (keep-awake)
+- New tooling outside the V1 app stack (GitHub Actions, Playwright), flagged
+  as such; it's ops tooling next to the app, not part of it. Playwright is
+  pinned in `requirements-dev.txt` and installed only by the workflow --
+  `requirements.txt` (what Streamlit Cloud installs) is unchanged.
+- Known limitation: GitHub disables scheduled workflows after 60 days
+  without repository activity; re-enable from the Actions tab if so.
+- Next: the Cloudflare Worker relay test for `stats.nba.com` (can a
+  free Worker fetch NBA stats from outside the blocked AWS/GCP/Azure
+  ranges?), as its own task.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
