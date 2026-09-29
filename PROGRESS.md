@@ -754,5 +754,48 @@ on; the 16 existing PR descriptions were edited to remove them. Older
 commit messages were deliberately left as-is (removing them would require
 rewriting and force-pushing the whole history).
 
+## Experiment — 2026-09-29: Cloudflare Worker relay to stats.nba.com — PASSED
+
+Question: can a free Cloudflare Worker reach `stats.nba.com`, which blocks
+the AWS/GCP/Azure ranges Streamlit Community Cloud runs on (task 1.9)?
+Previously the relay idea was deferred because it assumed a paid (~€5/mo)
+non-hyperscaler VPS; a Worker runs on Cloudflare's own network for free.
+Expected risk going in: Akamai (NBA's bot protection) also fingerprints
+requests, and Cloudflare labels Worker-originated requests, so it could
+plausibly have been blocked too -- hence test first, don't assume.
+
+- `relay/worker.js` (~70 lines incl. comments), deployed by pasting into
+  the Cloudflare dashboard (no CLI/login needed): forwards
+  `GET /stats/<endpoint>?<params>` to stats.nba.com with the same
+  browser-like headers nba_api sends, 20s timeout, returns the response
+  unchanged plus an `X-Relay-Upstream-Ms` timing header.
+- Protected by a shared secret (`X-Relay-Key` header vs. a `RELAY_KEY`
+  Worker secret) so the URL can't be used as an open proxy against the
+  free quota. Key generated locally into `.streamlit/secrets.toml`
+  (gitignored) -- the file the app will read it from in the next task.
+- **Result: 20/20 requests succeeded** (5 rounds x Don Ohl + Michael
+  Jordan x CommonPlayerInfo + PlayerCareerStats, i.e. exactly the two
+  endpoints the app uses, for two players absent from the seed DB).
+  Round trip median 0.60s / max 1.10s; stats.nba.com-side median 250ms.
+  Without the key, or with a wrong key: 403. Payloads complete (Don Ohl:
+  10 seasons 1960-61..1969-70; Jordan: 15 seasons 1984-85..2002-03).
+- Caveat: tested from a home machine. The Worker's outbound request comes
+  from Cloudflare either way, so this is the relevant test, but the
+  definitive proof is a call from the Streamlit Cloud host itself --
+  part of the next task.
+- Unrelated, found during the test: pandas failed to import locally again
+  ("An Application Control policy has blocked this file") -- same Windows
+  Security issue as during 1.9; test rerun without pandas.
+
+## Decisions made (relay experiment)
+- Worker pasted via dashboard rather than `wrangler` CLI: no Node toolchain
+  or CLI login needed; the committed `relay/worker.js` is the source of
+  truth and must be re-pasted if changed.
+- Next task (separate): route `fetch.py` through the relay when a
+  `RELAY_URL`/`RELAY_KEY` secret is configured (nba_api's base URL is a
+  single class attribute, `NBAStatsHTTP.base_url`), add the secrets to
+  Streamlit Cloud, verify a non-seeded player loads on the live demo, then
+  revisit the "active players only" limitation in the README.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
