@@ -12,8 +12,8 @@ Completed task: 1.1 Repo setup
   import correctly (nba_api 1.11.4, pandas 3.0.6, streamlit 1.64.0,
   plotly 7.1.0).
 - Added `docs/methodology.md` stub (to be filled in once an ML/data
-  decision is made, per CLAUDE.md working rule 7).
-- Committed CLAUDE.md, ROADMAP.md, and PROGRESS.md themselves to the repo
+  decision is made).
+- Committed ROADMAP.md and PROGRESS.md themselves to the repo
   (previously only local drafts, untracked by git).
 - Reused the existing `.gitignore` as-is — it already covers `.venv/`,
   `__pycache__/`, `*.db`, and `.streamlit/secrets.toml`.
@@ -227,8 +227,8 @@ Completed task: 1.6 Streamlit — player profile page
   `clean.py`/`database.py`.
 - Added a Plotly line chart of points-per-game across a player's
   career.
-- Added `.claude/launch.json` (Streamlit dev server config) to make
-  the app previewable/testable going forward.
+- Added a local Streamlit dev server config to make the app
+  previewable/testable going forward.
 - Tested live in a browser (not just import-checked): verified a
   cache-hit search (LeBron James, already in the DB), a cache-miss
   search (Nikola Jokic — triggers a live fetch, insert, then display),
@@ -745,6 +745,14 @@ scheduled GitHub Actions workflow.
 - Next: the Cloudflare Worker relay test for `stats.nba.com` (can a
   free Worker fetch NBA stats from outside the blocked AWS/GCP/Azure
   ranges?), as its own task.
+
+## Housekeeping — 2026-09-29: local tool config no longer published
+Stopped tracking the local AI-assistant config files (instructions file and
+dev-server config); they stay on disk and are now gitignored. Commit
+messages and PR descriptions no longer carry AI attribution lines from here
+on; the 16 existing PR descriptions were edited to remove them. Older
+commit messages were deliberately left as-is (removing them would require
+rewriting and force-pushing the whole history).
 
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
