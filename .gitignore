@@ -227,3 +227,7 @@ data/processed/*
 
 # Failure screenshot written by scripts/keep_awake.py
 keep_awake_failure.png
+
+# Local AI-assistant config (kept on disk, not published)
+CLAUDE.md
+.claude/
