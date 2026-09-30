@@ -13,7 +13,7 @@ from nba_api.stats.static import players as static_players
 
 from src.clean import clean_career_stats, clean_player_bio
 from src.database import init_db, insert_career_stats, insert_player_bio
-from src.fetch import fetch_player_career_stats, fetch_player_info
+from src.fetch import configure_relay, fetch_player_career_stats, fetch_player_info
 
 HEADSHOT_URL = "https://cdn.nba.com/headshots/nba/latest/1040x760/{person_id}.png"
 
@@ -69,6 +69,24 @@ def get_connection() -> sqlite3.Connection:
     return init_db()
 
 
+@st.cache_resource
+def _configure_live_fetching() -> bool:
+    """Apply the relay settings from Streamlit secrets, once per process.
+
+    Read here rather than in fetch.py so the pipeline modules stay free of any
+    Streamlit dependency. RELAY_URL and RELAY_KEY are set in the deployed app's
+    secrets; with no secrets file (e.g. a fresh local checkout) or either value
+    missing, requests go straight to stats.nba.com as before.
+    """
+    try:
+        url, key = st.secrets.get("RELAY_URL"), st.secrets.get("RELAY_KEY")
+    except FileNotFoundError:  # no secrets.toml at all
+        url = key = None
+    active = configure_relay(url, key)
+    print(f"Live NBA fetching: {'via relay' if active else 'direct to stats.nba.com'}", flush=True)
+    return active
+
+
 def has_player(conn: sqlite3.Connection, person_id: int) -> bool:
     """True if the player is already in the local DB (no live fetch needed)."""
     row = conn.execute("SELECT 1 FROM players WHERE PERSON_ID = ?", (person_id,)).fetchone()
@@ -83,6 +101,7 @@ def get_or_build_player(_conn: sqlite3.Connection, person_id: int) -> tuple[pd.D
         "SELECT * FROM players WHERE PERSON_ID = ?", _conn, params=(person_id,)
     )
     if bio_df.empty:
+        _configure_live_fetching()
         bio_df = clean_player_bio(fetch_player_info(person_id))
         stats_df = clean_career_stats(fetch_player_career_stats(person_id))
         insert_player_bio(_conn, bio_df)
