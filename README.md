@@ -82,7 +82,8 @@ Search any NBA player by name on the **Player Profile** page, or switch to
   Worker ([`relay/worker.js`](relay/worker.js)) that forwards them to
   `stats.nba.com` from Cloudflare's network, guarded by a shared secret.
   The relay is only used when `RELAY_URL` and `RELAY_KEY` are set in the
-  app's Streamlit secrets; running locally, requests go direct.
+  app's Streamlit secrets (read once at startup, so reboot the app after
+  changing them); running locally, requests go direct.
   The deployed database is also pre-seeded with every player on a current
   NBA roster (`src/seed.py`), so those load instantly without any API call.
   If a fetch still fails, the app shows a short notice and keeps the
