@@ -857,5 +857,25 @@ Two setup problems hit on the way, both worth remembering:
   started with. Deliberate trade-off (no secrets lookup per fetch), now
   documented in the README.
 
+## Release — 2026-09-30: v1.1.0
+
+Tagged `v1.1.0` on `main` (ce464e1) and published the
+[GitHub Release](https://github.com/jnoscodes/hoopanalytics/releases/tag/v1.1.0),
+covering PRs #15-#21 since v1.0.0: any player on the live demo via the
+Cloudflare relay, graceful fetch failures (toast + 5-min pause), the
+keep-awake/uptime workflow, the V1 user-testing fixes, and refreshed README
+screenshots (now captured with Playwright, headshots served through request
+routing instead of the old Pillow compositing).
+
+## Decisions made (v1.1.0)
+- MINOR bump (1.1.0), not PATCH (1.0.1): semver reserves PATCH for bug
+  fixes only, and this release adds backward-compatible features (relay,
+  toast, keep-awake). Going forward: every significant change merged into
+  main gets a release proposal with a semver justification.
+- Release notes keep the v1.0.0 format (issue -> diagnosis -> fix -> why it
+  matters), with absolute links (relative ones don't resolve on a release
+  page). This log entry is a separate commit, not part of the tagged
+  snapshot, same as for v1.0.0.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
