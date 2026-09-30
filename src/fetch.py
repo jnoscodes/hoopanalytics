@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 
 from nba_api.stats.endpoints import commonplayerinfo, playercareerstats
+from nba_api.stats.library.http import NBAStatsHTTP
 from nba_api.stats.static import players
 
 RAW_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
@@ -22,6 +23,51 @@ RAW_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 REQUEST_TIMEOUT = 10
 MAX_RETRIES = 3
 THROTTLE_SECONDS = 0.7
+
+# nba_api's defaults, kept so configure_relay() can switch back to direct.
+_DIRECT_BASE_URL = NBAStatsHTTP.base_url
+_DIRECT_HEADERS = NBAStatsHTTP.headers
+
+
+def configure_relay(url: str | None, key: str | None) -> bool:
+    """Route live requests through the Cloudflare relay (relay/worker.js) if
+    both url and key are set; otherwise call stats.nba.com directly.
+
+    stats.nba.com blocks the AWS/GCP/Azure ranges cloud hosts run on (see
+    PROGRESS.md, task 1.9); the relay runs on Cloudflare's network instead.
+
+    nba_api has no public option for this. Every stats endpoint builds its URL
+    from the class attribute NBAStatsHTTP.base_url and, unless given headers,
+    sends NBAStatsHTTP.headers -- so overriding those two attributes redirects
+    every endpoint at once, and direct (local) and relayed (deployed) runs
+    share the exact same request-building code. This relies on nba_api
+    internals (version pinned in requirements.txt); the check below turns a
+    future removal of either attribute into a loud error instead of requests
+    silently going direct.
+
+    Returns True if the relay is active.
+    """
+    for attr in ("base_url", "headers"):
+        if not hasattr(NBAStatsHTTP, attr):
+            raise RuntimeError(
+                f"nba_api's NBAStatsHTTP has no '{attr}' attribute in this version; "
+                "configure_relay() needs updating."
+            )
+
+    if not (url and key):
+        NBAStatsHTTP.base_url = _DIRECT_BASE_URL
+        NBAStatsHTTP.headers = _DIRECT_HEADERS
+        return False
+
+    NBAStatsHTTP.base_url = url.rstrip("/") + "/stats/{endpoint}"
+    NBAStatsHTTP.headers = {
+        # Host would name stats.nba.com while the request goes to the relay.
+        **{k: v for k, v in _DIRECT_HEADERS.items() if k != "Host"},
+        # No "br": requests can only decode brotli with an extra package.
+        "Accept-Encoding": "gzip, deflate",
+        "X-Relay-Key": key,
+    }
+    return True
 
 
 def get_player_id(full_name: str) -> int:
