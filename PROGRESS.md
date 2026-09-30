@@ -797,5 +797,52 @@ plausibly have been blocked too -- hence test first, don't assume.
   Streamlit Cloud, verify a non-seeded player loads on the live demo, then
   revisit the "active players only" limitation in the README.
 
+## Feature — 2026-09-30: app routes live NBA requests through the relay
+
+Follow-up to the passed Cloudflare relay experiment. Chosen design: option
+(A), redirect nba_api itself, over (B) hand-written HTTP calls to the relay
+for deployed runs only, or (B') replacing nba_api's HTTP layer everywhere.
+
+- Why A: every nba_api stats endpoint builds its URL from the class
+  attribute `NBAStatsHTTP.base_url` and sends `NBAStatsHTTP.headers` unless
+  given headers. Overriding those two attributes redirects both endpoints
+  at once, so local (direct) and deployed (relayed) runs share the exact
+  same request-building code: what's tested locally is what runs in
+  production. Under (B), the relayed path would be code never exercised
+  locally -- a typo there would only surface on the live site.
+- Cost of A: it depends on nba_api internals. Mitigated by the pinned
+  version (breaks only on a deliberate upgrade) and a startup check that
+  raises if either attribute disappears, instead of silently going direct.
+- `fetch.configure_relay(url, key)`: relay headers = nba_api's defaults
+  minus `Host` (it would name stats.nba.com while the request goes to the
+  Worker), with `Accept-Encoding: gzip, deflate` (requests can't decode
+  brotli without an extra package) and the `X-Relay-Key` secret.
+  Missing url or key -> restore the direct defaults.
+- `pipeline._configure_live_fetching()`: reads `RELAY_URL`/`RELAY_KEY` from
+  `st.secrets` once per process (`st.cache_resource`), called only on a DB
+  miss, and logs "Live NBA fetching: via relay" / "direct". Kept out of
+  `fetch.py` so the pipeline modules stay Streamlit-free.
+- Verified locally: wrong key -> all 3 attempts fail (the Worker's 403
+  "Forbidden" isn't JSON), proving requests really go through the relay;
+  right key -> Kareem Abdul-Jabbar (bio + 20 season rows) in 2.3s; switching
+  back restores the direct URL and headers. In the running app with the
+  relay enabled: Wilt Chamberlain and Bill Russell (both uncached) loaded,
+  server log "Live NBA fetching: via relay". Local secrets restored to
+  direct afterwards.
+- Bug surfaced by old players now loading: "Drafted 1959 · Round None, pick
+  None". Some players have a draft year with a null (or "0") round/pick --
+  old territorial picks (Wilt Chamberlain) but also players undrafted that
+  year (T.J. McConnell 2015, Haywood Highsmith 2018). The data can't tell
+  them apart, so the neutral "1959 draft · no pick on record" is shown.
+- Also: the "Live NBA fetching" log line needed `flush=True` -- Streamlit's
+  stdout is piped, so print output was block-buffered and never appeared.
+
+## Pending (needs the user)
+- Add `RELAY_URL` and `RELAY_KEY` to the Streamlit Cloud app's secrets,
+  then verify a non-seeded player (Don Ohl, Michael Jordan) loads on the
+  live demo -- the definitive test that stats.nba.com accepts relayed
+  requests coming from the cloud host. Until then the README's "any NBA
+  player" claim for the live demo isn't true yet.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
