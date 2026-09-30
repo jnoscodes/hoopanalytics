@@ -837,12 +837,25 @@ for deployed runs only, or (B') replacing nba_api's HTTP layer everywhere.
 - Also: the "Live NBA fetching" log line needed `flush=True` -- Streamlit's
   stdout is piped, so print output was block-buffered and never appeared.
 
-## Pending (needs the user)
-- Add `RELAY_URL` and `RELAY_KEY` to the Streamlit Cloud app's secrets,
-  then verify a non-seeded player (Don Ohl, Michael Jordan) loads on the
-  live demo -- the definitive test that stats.nba.com accepts relayed
-  requests coming from the cloud host. Until then the README's "any NBA
-  player" claim for the live demo isn't true yet.
+## Relay verified live — 2026-09-30
+
+After merging #19 and adding `RELAY_URL`/`RELAY_KEY` to the Streamlit Cloud
+secrets, non-seeded players now load on the live demo: Don Ohl (2.6s) and
+Michael Jordan (2.6s, all 15 seasons 1984-85..2002-03) -- the definitive
+proof that stats.nba.com accepts relayed requests coming from the cloud
+host. The "active players only" limitation of the live demo is gone.
+
+Two setup problems hit on the way, both worth remembering:
+- First attempts failed instantly (~0.6s, no spinner). The timing pointed
+  away from blocking (blocked requests time out after ~30s) and toward the
+  Worker refusing the key fast. Cause: the `RELAY_KEY` secret had been
+  pasted as the literal placeholder from my instructions
+  (`"<the value from ...>"`), not the key itself -- my instructions should
+  have made that unmistakable.
+- Changing the secrets needs an app **reboot**: the relay settings are read
+  once per process (`st.cache_resource`), so a running app keeps the mode it
+  started with. Deliberate trade-off (no secrets lookup per fetch), now
+  documented in the README.
 
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)
