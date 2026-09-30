@@ -29,7 +29,7 @@ a notebook analysis.
 
 ## Try it
 
-- **Live demo:** [hoopanalytics.streamlit.app](https://hoopanalytics.streamlit.app/) — no install needed. Pre-seeded with every player on a current NBA roster, so most searches work instantly.
+- **Live demo:** [hoopanalytics.streamlit.app](https://hoopanalytics.streamlit.app/) — no install needed. Any NBA player, current or retired; current players are pre-seeded and load instantly.
 - **Run it yourself:** see [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for a step-by-step guide with screenshots, no prior Python/Git experience assumed.
 
 ## Architecture
@@ -74,22 +74,20 @@ Search any NBA player by name on the **Player Profile** page, or switch to
 
 ## Known limitations
 
-- **`stats.nba.com` blocks cloud-hosted requests.** Confirmed (not just
-  suspected) via the live deploy: NBA's live stats API sits behind bot
-  protection that blocks AWS/GCP/Azure datacenter IP ranges — which
-  nearly every cloud host, including Streamlit Community Cloud, runs on
-  top of. This means a *new* (uncached) player search on the live demo
-  can fail. Worked around for now by pre-seeding the deployed database
-  with every player on a current NBA roster (`src/seed.py`) — most
-  searches work reliably; a genuinely new/very old player might not. The
-  real fix (routing requests through a small relay hosted outside those
-  three cloud providers) is a planned future addition — see
-  `PROGRESS.md`. Running the app locally (no cloud-IP restriction) always
-  works for any player — see
-  [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
-  When a player can't be fetched, the app shows a short notice and keeps
-  the current player on screen instead of crashing; after one failure,
-  live fetches are paused for 5 minutes so later picks fail instantly.
+- **`stats.nba.com` blocks cloud-hosted requests** — handled with a relay.
+  NBA's live stats API sits behind bot protection that blocks AWS/GCP/Azure
+  datacenter IP ranges, which nearly every cloud host (Streamlit Community
+  Cloud included) runs on, so the deployed app can't call it directly.
+  The deployed app instead sends its requests through a small Cloudflare
+  Worker ([`relay/worker.js`](relay/worker.js)) that forwards them to
+  `stats.nba.com` from Cloudflare's network, guarded by a shared secret.
+  The relay is only used when `RELAY_URL` and `RELAY_KEY` are set in the
+  app's Streamlit secrets; running locally, requests go direct.
+  The deployed database is also pre-seeded with every player on a current
+  NBA roster (`src/seed.py`), so those load instantly without any API call.
+  If a fetch still fails, the app shows a short notice and keeps the
+  current player on screen instead of crashing; after one failure, live
+  fetches pause for 5 minutes so later picks fail instantly.
 - **The live demo can be slow to open.** Streamlit Community Cloud puts
   apps to sleep after 12 hours without visitors, and the next visitor has
   to wake it up (up to a minute or so). A scheduled GitHub Actions
@@ -122,6 +120,7 @@ data/
   seed/          # committed seed database (active players, see src/seed.py)
 notebooks/       # exploratory notebooks
 scripts/         # ops scripts (keep_awake.py: keeps the live demo awake)
+relay/           # Cloudflare Worker relaying requests to stats.nba.com
 .github/         # GitHub Actions workflows (scheduled keep-awake visit)
 docs/            # methodology notes, README images, getting-started guide
 tests/           # automated tests (not yet populated)
