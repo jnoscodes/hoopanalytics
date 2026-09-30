@@ -138,6 +138,12 @@ def format_draft(bio: pd.Series) -> str:
     three DRAFT_* fields, and DRAFT_NUMBER is the overall pick number."""
     if bio["DRAFT_YEAR"] == "Undrafted":
         return "Undrafted"
+    # Some players have a draft year but no round/pick (null, or round "0"):
+    # both old territorial picks (Wilt Chamberlain, 1959) and players who went
+    # undrafted that year (T.J. McConnell, 2015). The data can't tell those
+    # apart, so this wording stays true for both.
+    if any(v in (None, "", "0") or pd.isna(v) for v in (bio["DRAFT_ROUND"], bio["DRAFT_NUMBER"])):
+        return f'{bio["DRAFT_YEAR"]} draft · no pick on record'
     return f'Drafted {bio["DRAFT_YEAR"]} · Round {bio["DRAFT_ROUND"]}, pick {bio["DRAFT_NUMBER"]}'
 
 
