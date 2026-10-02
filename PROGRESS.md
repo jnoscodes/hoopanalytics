@@ -877,5 +877,16 @@ routing instead of the old Pillow compositing).
   page). This log entry is a separate commit, not part of the tagged
   snapshot, same as for v1.0.0.
 
+## Ops — 2026-10-02: keep-awake every 3h instead of 6h
+
+Measured the scheduled runs over ~2.5 days: GitHub ran only ~3 of the 4
+daily 6h slots, typically 20 min to 5h late, so the real gaps between
+visits were 7-9.7h -- uncomfortably close to Streamlit's 12h sleep limit.
+Changed the cron from `17 */6 * * *` to `17 */3 * * *`: even with the same
+delays and drops, the worst-case gap stays far below 12h. Still free
+(public repo, ~1 min per run). All runs so far passed ("app already
+awake"), so the app never actually slept -- this is margin, not a fix for an
+observed outage.
+
 ## Next task
 2.1 Feature engineering for the similarity model (V2 start)

@@ -92,7 +92,7 @@ Search any NBA player by name on the **Player Profile** page, or switch to
 - **The live demo can be slow to open.** Streamlit Community Cloud puts
   apps to sleep after 12 hours without visitors, and the next visitor has
   to wake it up (up to a minute or so). A scheduled GitHub Actions
-  workflow (`.github/workflows/keep-awake.yml`) visits the app every 6
+  workflow (`.github/workflows/keep-awake.yml`) visits the app every 3
   hours with a headless browser to prevent this. Caveat: GitHub disables
   scheduled workflows after 60 days without repository activity. Once
   awake, a first visit takes ~10s (the browser downloads Streamlit's and
