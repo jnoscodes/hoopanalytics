@@ -6,10 +6,12 @@ name: Keep live demo awake
 
 on:
   schedule:
-    # Every 6 hours, well inside the 12h limit even if GitHub delays or
-    # skips a scheduled run. Minute 17 rather than :00, since the top of
+    # Every 3 hours. GitHub delays and drops scheduled runs: on a 6h
+    # schedule only ~3 of 4 daily runs happened, hours late, leaving gaps of
+    # up to 9.7h against Streamlit's 12h sleep limit. Every 3h keeps the
+    # worst case well inside it. Minute 17 rather than :00, since the top of
     # the hour is GitHub's busiest (and most delayed) slot.
-    - cron: "17 */6 * * *"
+    - cron: "17 */3 * * *"
   workflow_dispatch: # manual "Run workflow" button, for testing
 
 permissions:
